@@ -2479,7 +2479,7 @@ try {
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="Images/logo.png" alt="Eguia National High School logo"
+                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png" alt="Eguia National High School logo"
                         onerror="this.style.display='none'">
                 </div>
                 <div class="logo-text">
@@ -3076,7 +3076,7 @@ try {
                 <div>
                     <a href="#" class="logo">
                         <div class="logo-mark">
-                            <img src="Images/logo.png" alt="Eguia National High School logo"
+                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png" alt="Eguia National High School logo"
                                 onerror="this.style.display='none'">
                         </div>
                         <div class="logo-text">
