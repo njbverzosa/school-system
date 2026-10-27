@@ -63,7 +63,7 @@ try {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&family=Kaushan+Script&display=swap"
         rel="stylesheet">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
@@ -101,7 +101,12 @@ try {
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
+            background-color: #0a1a33;
+            background-image: url('image(6).png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
@@ -262,6 +267,20 @@ try {
             border-radius: 10px;
             position: relative;
             z-index: 1;
+        }
+
+        /* Mas malaking logo sa navigation bar lamang */
+        .nav .logo-mark {
+            width: 76px;
+            height: 60px;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .nav .logo-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .logo-text {
@@ -613,7 +632,7 @@ try {
         }
 
         .modal-head.login-head {
-            background: linear-gradient(135deg, #0e7490, #06b6d4);
+            background: linear-gradient(135deg, #0a1a33, #1e3a8a);
         }
 
         .modal-head h3 {
@@ -979,7 +998,7 @@ try {
             padding: 100px 0 120px;
             background-image:
                 linear-gradient(135deg, rgba(10, 26, 51, 0.88) 0%, rgba(10, 26, 51, 0.65) 50%, rgba(10, 26, 51, 0.88) 100%),
-                url('deped-bg.jpg');
+                url('school-hero-banner.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -1050,7 +1069,7 @@ try {
         }
 
         .hero-brand-text .brand-name {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Kaushan Script', cursive;
             font-size: 32px;
             font-weight: 800;
             color: #fff;
@@ -1168,9 +1187,13 @@ try {
             line-height: 1.75;
         }
 
-        /* DIRECTORY */
+        /* DIRECTORY — custom school-themed background */
         .directory {
-            background: #fff;
+            background-image: linear-gradient(rgba(255, 255, 255, .78), rgba(255, 255, 255, .78)), url('services-bg(1).png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: scroll;
             border-bottom: 1px solid var(--line);
         }
 
@@ -1378,7 +1401,11 @@ try {
 
         /* SERVICES */
         .services {
-            background: var(--bg);
+            background-image: linear-gradient(rgba(248, 250, 252, .82), rgba(248, 250, 252, .82)), url('news-bg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: scroll;
         }
 
         .svc-grid {
@@ -1547,7 +1574,11 @@ try {
 
         /* NEWS */
         .news {
-            background: #fff;
+            background-image: linear-gradient(rgba(255, 255, 255, .78), rgba(255, 255, 255, .78)), url('directory-bg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: scroll;
         }
 
         .news-grid {
@@ -1641,28 +1672,29 @@ try {
 
         /* CTA */
         .cta-wrap {
-            padding: 0 0 96px;
-            background: #fff;
+            min-height: 410px;
+            display: flex;
+            align-items: center;
+            padding: 36px 0;
+            background:
+                linear-gradient(rgba(255, 255, 255, .10), rgba(255, 255, 255, .10)),
+                url('enrollment-bg.png') center 28% / cover no-repeat;
         }
 
+        /* CTA — tinanggal ang blue container; text at buttons na lang ang matitira */
         .cta {
             position: relative;
-            overflow: hidden;
+            width: 100%;
             text-align: center;
-            background: linear-gradient(135deg, #1d4ed8, #0e7490);
-            border-radius: 28px;
-            padding: 64px 32px;
-            color: #fff;
-            box-shadow: 0 34px 70px -30px rgba(29, 78, 216, .7);
+            background: transparent;
+            border-radius: 0;
+            padding: 40px 24px;
+            color: var(--text);
+            box-shadow: none;
         }
 
         .cta::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(520px 260px at 18% 0%, rgba(255, 255, 255, .22), transparent 65%),
-                radial-gradient(520px 260px at 88% 100%, rgba(255, 255, 255, .16), transparent 65%);
+            content: none;
         }
 
         .cta>* {
@@ -1673,14 +1705,32 @@ try {
             font-size: clamp(1.7rem, 3.2vw, 2.4rem);
             font-weight: 800;
             margin-bottom: 14px;
+            color: #ffffff;
         }
 
         .cta p {
-            color: rgba(255, 255, 255, .82);
+            color: #ffffff;
             max-width: 560px;
             margin: 0 auto 32px;
             font-size: 16px;
             line-height: 1.7;
+        }
+
+        .cta .btn-light {
+            background: linear-gradient(135deg, var(--primary-2), var(--primary-dark));
+            color: #fff;
+            box-shadow: 0 12px 26px -10px rgba(37, 99, 235, .35);
+        }
+
+        .cta .btn-ghost {
+            background: #fff;
+            color: var(--primary-dark);
+            border: 1px solid #bfdbfe;
+            backdrop-filter: none;
+        }
+
+        .cta .btn-ghost:hover {
+            background: #eff6ff;
         }
 
         .cta-actions {
@@ -1692,8 +1742,8 @@ try {
 
         /* FOOTER */
         .footer {
-            background: #08152b;
-            color: rgba(255, 255, 255, .66);
+            background: #0a1a33;
+            color: rgba(255, 255, 255, .82);
             padding: 66px 0 0;
         }
 
@@ -2011,8 +2061,14 @@ try {
                 padding: 60px 0;
             }
 
+            .cta-wrap {
+                min-height: 360px;
+                padding: 28px 0;
+                background-position: 58% center;
+            }
+
             .cta {
-                padding: 44px 20px;
+                padding: 36px 20px;
                 border-radius: 20px;
             }
 
@@ -2391,6 +2447,30 @@ try {
                 border-radius: 10px;
             }
         }
+
+        /* NAV BACKGROUND ONLY — original logo and navigation content preserved */
+        .nav {
+            background-color: #061a3e;
+            background-image: url("campuslink-nav-background.png");
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            backdrop-filter: none;
+            border-bottom: none;
+        }
+
+        /* Solid white text for the CampusLink navbar */
+        .nav .logo-text b,
+        .nav .nav-links a {
+            color: #fff;
+        }
+
+        .nav .nav-links a:hover,
+        .nav .nav-links a:focus-visible {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
     </style>
 </head>
 
@@ -2806,7 +2886,7 @@ try {
                     SY 2025–2026 · Bukas na ang Enrollment sa CampusLink
                 </div>
 
-                <h1>Isang portal para sa <span class="grad">lahat ng paaralan sa Dasol.</span></h1>
+                <h1>“Pagkakaisa sa Edukasyon, <span class="grad">Pag-asa para sa Bawat Mag-aaral ng Dasol.”</span></h1>
 
                 <p class="lead">
                     Mula elementary hanggang senior high — hanapin ang paaralan mo,
@@ -2821,10 +2901,9 @@ try {
         <div class="container">
             <div class="section-head reveal">
                 <span class="eyebrow">Direktoryo ng Paaralan</span>
-                <h2 class="section-title">Lahat ng paaralan sa Dasol, isang lugar</h2>
+                <h2 class="section-title">Lahat ng paaralan sa Dasol</h2>
                 <p class="section-sub">
-                    Piliin ang paaralan para makapasok sa kanilang portal. May filter at search
-                    para mabilis mong mahanap ang kailangan mo.
+                    Piliin ang paaralan para makapasok sa kanilang portal.
                 </p>
             </div>
 
@@ -2850,10 +2929,7 @@ try {
             <div class="section-head center reveal">
                 <span class="eyebrow">Serbisyo</span>
                 <h2 class="section-title">Lahat ng serbisyo, isang click lang</h2>
-                <p class="section-sub">
-                    Mula sa enrollment hanggang sa pagtingin ng grades at pagbabayad ng fees —
-                    nakaayos lahat para sa mga estudyante, magulang, at guro.
-                </p>
+                
             </div>
 
             <div class="svc-grid">
@@ -2942,7 +3018,7 @@ try {
                     </div>
                     <div class="news-body">
                         <div class="news-date">Hunyo 3, 2025</div>
-                        <h3>Bukas na ang Online Enrollment para sa SY 2025–2026</h3>
+                        <h3>Bukas na ang Online Enrollment para sa SY 2026–2027</h3>
                         <p>Simula Hunyo 3, tatanggap na ng enrollment ang lahat ng pampublikong paaralan sa Dasol sa
                             pamamagitan ng portal.</p>
                         <a href="#" class="svc-link">Magbasa pa <i class="fas fa-arrow-right"></i></a>
@@ -3004,18 +3080,18 @@ try {
                                 onerror="this.style.display='none'">
                         </div>
                         <div class="logo-text">
-                            <b>Eguia National High School</b>
+                            <b>Campus Link</b>
                             <span>Pangasinan · District I & II</span>
                         </div>
                     </a>
                     <p class="footer-about">
-                        Ang opisyal na portal ng Eguia National High School sa Dasol, Pangasinan.
+                        Ang opisyal na portal ng lahat ng eskwelahan sa Dasol, Pangasinan.
                         Nagbibigay ng mabilis at secure na access sa mga serbisyo ng paaralan.
                     </p>
                 </div>
 
                 <div>
-                    <h4>Mga Link</h4>
+                    <h4>LINKS</h4>
                     <ul>
                         <li><a href="#schools">Mga Paaralan</a></li>
                         <li><a href="#services">Serbisyo</a></li>
@@ -3025,7 +3101,7 @@ try {
                 </div>
 
                 <div>
-                    <h4>Suporta</h4>
+                    <h4>SUPPORT</h4>
                     <ul>
                         <li><a href="#">Helpdesk</a></li>
                         <li><a href="#">FAQ</a></li>
@@ -3035,17 +3111,16 @@ try {
                 </div>
 
                 <div>
-                    <h4>Kontak</h4>
+                    <h4>CONTACTS</h4>
                     <ul class="footer-contact">
                         <li><i class="fas fa-location-dot"></i> Dasol, Pangasinan, Philippines</li>
                         <li><i class="fas fa-phone"></i> (075) 123-4567</li>
-                        <li><i class="fas fa-envelope"></i> info@eguianhs.edu.ph</li>
                     </ul>
                 </div>
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2025 Eguia National High School. All rights reserved.</p>
+                <p>&copy; 2026 CampusLink. All rights reserved.</p>
                 <div class="footer-socials">
                     <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
                     <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
