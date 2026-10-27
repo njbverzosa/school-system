@@ -1,0 +1,1484 @@
+<?php
+// admin/dashboard.php — Administrator dashboard
+require_once __DIR__ . '/../DB_Conn/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+}
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
+/* ------------------------------------------------------------
+   AUTH — must be admin
+   ------------------------------------------------------------ */
+$isAdmin = false;
+$adminUser = null;
+
+if (!empty($_SESSION['account_number']) && is_string($_SESSION['account_number'])) {
+    $accountNumber = trim($_SESSION['account_number']);
+
+    $formatOk = (bool) preg_match('/^26[A-Z]{1,8}_A\d{1,7}$/', $accountNumber);
+
+    if ($formatOk) {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT *
+                FROM admins
+                WHERE account_number = ?
+                  AND user_type = 'admin'
+                LIMIT 1
+            ");
+            $stmt->execute([$accountNumber]);
+            $adminUser = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+            if (!$adminUser) {
+                header('Location: ../index.php');
+                exit;
+            }
+            $isAdmin = true;
+        } catch (PDOException $e) {
+            error_log("admin fetch failed: " . $e->getMessage());
+            http_response_code(500);
+            echo "Database error. Please try again later.";
+            exit;
+        }
+    } else {
+        header('Location: ../index.php');
+        exit;
+    }
+} else {
+    header('Location: ../index.php');
+    exit;
+}
+
+/* ------------------------------------------------------------
+   ADMIN SCHOOL
+   ------------------------------------------------------------ */
+$adminSchoolName = trim((string) ($adminUser['school_name'] ?? ''));
+if ($adminSchoolName === '') {
+    $adminSchoolName = 'Eguia National High School';
+}
+
+/* ------------------------------------------------------------
+   HELPERS
+   ------------------------------------------------------------ */
+function currentAcademicYear(): string
+{
+    $y = (int) date('Y');
+    return ((int) date('n') < 6) ? (($y - 1) . '-' . $y) : ($y . '-' . ($y + 1));
+}
+
+$currentYear = currentAcademicYear();
+
+/* ------------------------------------------------------------
+   GRADE + SECTION MAP
+   ------------------------------------------------------------ */
+$gradeOptions = ['7', '8', '9', '10', '11', '12'];
+
+$sectionOptionsByGrade = [
+    '7' => ['Ilang-Ilang', 'Dahlia', 'Rosal', 'Sampaguita'],
+    '8' => ['Acacia', 'Yakal', 'Molave', 'Mahogany'],
+    '9' => ['Mabini', 'Rizal', 'Jacinto', 'Bonifacio'],
+    '10' => ['Emerald', 'Diamond', 'Jade'],
+    '11' => ['Home Economics - Pasteur', 'Einstein', 'Socrates', 'Franklin'],
+    '12' => ['Automotive Servicing', 'TVL - HE', 'STEM', 'Humanities & Social Science'],
+];
+
+$sectionMapJson = json_encode($sectionOptionsByGrade);
+
+/* ------------------------------------------------------------
+   FLASH
+   ------------------------------------------------------------ */
+$flashError = $_SESSION['flash']['admin_error'] ?? null;
+$flashSuccess = $_SESSION['flash']['admin_success'] ?? null;
+unset($_SESSION['flash']['admin_error'], $_SESSION['flash']['admin_success']);
+
+/* ------------------------------------------------------------
+   FETCH DATA
+   ------------------------------------------------------------ */
+$totalStudents = 0;
+$totalTeachers = 0;
+$totalAssignments = 0;
+$pendingEnrollments = 0;
+$enrollmentOpen = false;
+
+try {
+    $totalStudents = (int) $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+    $totalTeachers = (int) $pdo->query("SELECT COUNT(*) FROM teachers")->fetchColumn();
+    $totalAssignments = (int) $pdo->query("SELECT COUNT(*) FROM student_subjects")->fetchColumn();
+} catch (PDOException $e) {
+    error_log("admin stats failed: " . $e->getMessage());
+}
+
+try {
+    $pendingEnrollments = (int) $pdo->query(
+        "SELECT COUNT(*) FROM enrolled_students WHERE status = 'Pending'"
+    )->fetchColumn();
+} catch (PDOException $e) {
+    error_log("pending enrollments fetch failed: " . $e->getMessage());
+    $pendingEnrollments = 0;
+}
+
+try {
+    $accessValue = $pdo->query("
+        SELECT enrollment_access
+        FROM students
+        WHERE student_type = 'O'
+        LIMIT 1
+    ")->fetchColumn();
+
+    $enrollmentOpen = ((int) $accessValue === 1);
+} catch (PDOException $e) {
+    error_log("enrollment state fetch failed: " . $e->getMessage());
+    $enrollmentOpen = false;
+}
+
+/* New Students — student_type = 'N', not yet enrolled */
+$newStudents = [];
+try {
+    $stmt = $pdo->prepare("
+        SELECT
+            account_number, first_name, middle_name, surname,
+            grade_level, sex, birth_date, age, school_name,
+            contact_number, guardian, guardian_contact_number,
+            student_type, registered_date, enrollment_status
+        FROM students
+        WHERE student_type = 'N'
+          AND (enrollment_status IS NULL OR enrollment_status <> 'enrolled')
+        ORDER BY surname, first_name
+    ");
+    $stmt->execute();
+    $newStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("new students fetch failed: " . $e->getMessage());
+}
+
+/* Transferees — student_type = 'T', not yet enrolled */
+$transferees = [];
+try {
+    $stmt = $pdo->prepare("
+        SELECT
+            account_number, first_name, middle_name, surname,
+            grade_level, sex, birth_date, age, school_name,
+            contact_number, guardian, guardian_contact_number,
+            student_type, registered_date, enrollment_status
+        FROM students
+        WHERE student_type = 'T'
+          AND (enrollment_status IS NULL OR enrollment_status <> 'enrolled')
+        ORDER BY surname, first_name
+    ");
+    $stmt->execute();
+    $transferees = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("transferees fetch failed: " . $e->getMessage());
+}
+
+/* Enrolled Students */
+$enrolledStudents = [];
+try {
+    $stmt = $pdo->query("
+        SELECT
+            e.account_number,
+            e.grade_level,
+            e.section,
+            e.academic_year,
+            s.first_name,
+            s.middle_name,
+            s.surname,
+            s.contact_number
+        FROM enrolled_students e
+        LEFT JOIN students s ON s.account_number = e.account_number
+        ORDER BY s.surname, s.first_name
+    ");
+    $enrolledStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("enrolled students fetch failed: " . $e->getMessage());
+}
+
+$gradeFilter = isset($_GET['grade']) ? trim((string) $_GET['grade']) : 'all';
+$validGrades = ['7', '8', '9', '10', '11', '12'];
+$isAllGrades = ($gradeFilter === 'all' || $gradeFilter === '');
+
+if (!$isAllGrades && !in_array($gradeFilter, $validGrades, true)) {
+    $gradeFilter = 'all';
+    $isAllGrades = true;
+}
+
+$filteredEnrolledStudents = [];
+if ($isAllGrades) {
+    $filteredEnrolledStudents = $enrolledStudents;
+} else {
+    foreach ($enrolledStudents as $s) {
+        if ((string) ($s['grade_level'] ?? '') === $gradeFilter) {
+            $filteredEnrolledStudents[] = $s;
+        }
+    }
+}
+
+$adminDisplayName = trim(
+    ($adminUser['first_name'] ?? '') . ' ' .
+    ($adminUser['middle_name'] ?? '') . ' ' .
+    ($adminUser['surname'] ?? '')
+);
+?>
+<!DOCTYPE html>
+<html lang="fil">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>" />
+    <title>Admin Dashboard — Eguia National High School</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-2: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --bg: #f8fafc;
+            --text: #0f172a;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --radius: 10px;
+            --shadow-md: 0 14px 34px -14px rgba(15, 23, 42, .22);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; overflow-y: scroll; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        img, svg { display: block; }
+        a { text-decoration: none; color: inherit; }
+
+        h1, h2, h3, h4 {
+            font-family: 'Poppins', sans-serif;
+            line-height: 1.18;
+            letter-spacing: -.02em;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* NAV */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, .96);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .nav-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 14px 0;
+            min-height: 108px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            min-width: 0;
+            text-decoration: none;
+            flex-shrink: 1;
+        }
+
+        .logo-mark {
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+        }
+
+        .logo-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+        .logo-divider {
+            width: 1px;
+            height: 54px;
+            background: var(--line);
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.1;
+            min-width: 0;
+            gap: 3px;
+        }
+
+        .logo-text b {
+            font-family: 'Poppins', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -.02em;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 480px;
+        }
+
+        .logo-text .school-name {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--muted);
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 480px;
+        }
+
+        .nav-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+
+        .page-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--primary-dark);
+            padding: 8px 16px;
+            white-space: nowrap;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .nav-toggle {
+            display: grid;
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius);
+            background: #f1f5f9;
+            border: 1px solid var(--line);
+            color: var(--text);
+            cursor: pointer;
+            place-items: center;
+            font-size: 20px;
+            transition: background .18s, color .18s, transform .18s;
+        }
+
+        .nav-toggle:hover { background: #eef2ff; color: var(--primary-dark); }
+        .nav-toggle:active { transform: scale(.96); }
+
+        .nav-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            left: auto;
+            width: 280px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            padding: 8px;
+            z-index: 200;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+        }
+
+        .nav-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+
+        .nav-dropdown-head {
+            padding: 10px 14px 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: #94a3b8;
+            font-weight: 700;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 6px;
+        }
+
+        .nav-dropdown a,
+        .nav-dropdown button {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: var(--radius);
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 500;
+            transition: background .15s, color .15s;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .nav-dropdown a:hover,
+        .nav-dropdown button:hover { background: #eef2ff; color: var(--primary-dark); }
+
+        .nav-dropdown a i,
+        .nav-dropdown button i {
+            font-size: 16px;
+            width: 18px;
+            text-align: center;
+            flex-shrink: 0;
+            color: var(--primary);
+        }
+
+        /* MAIN */
+        main { padding: 40px 0 64px; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 40px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-card .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--muted);
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .stat-card .value {
+            font-family: 'Poppins';
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            line-height: 1.1;
+        }
+
+        .section {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .section-head h2 { font-size: 18px; font-weight: 700; }
+        .section-head p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+        .toggle-panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 20px;
+            border-radius: var(--radius);
+            background: #f8fafc;
+            border: 1px solid var(--line);
+        }
+
+        .toggle-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 52px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked+.slider { background-color: #10b981; }
+        input:focus+.slider { box-shadow: 0 0 1px #10b981; }
+        input:checked+.slider:before { transform: translateX(24px); }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        table.data thead { background: #f1f5f9; }
+        table.data th,
+        table.data td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--line);
+            white-space: nowrap;
+        }
+        table.data th {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #64748b;
+        }
+        table.data tbody tr:last-child td { border-bottom: none; }
+        table.data tbody tr:hover { background: #f8fafc; }
+
+        .name-block { display: flex; flex-direction: column; line-height: 1.25; }
+        .name-block .contact-sub {
+            font-size: 11.5px;
+            color: var(--muted);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: transform .15s, box-shadow .15s;
+        }
+
+        .btn-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .btn-danger:hover { background: #fee2e2; }
+
+        .btn-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .btn-success:hover { background: #d1fae5; }
+
+        .btn-cancel {
+            background: #fff;
+            color: var(--text);
+            border: 1px solid var(--line);
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .btn-cancel:hover { background: #f1f5f9; }
+
+        /* INLINE ENROLLMENT CONTROLS */
+        .enroll-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+
+        .mini-select {
+            font-family: inherit;
+            font-size: 12.5px;
+            padding: 6px 24px 6px 8px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--text);
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            background-size: 12px;
+            min-width: 100px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .mini-select:focus {
+            outline: none;
+            border-color: var(--primary-2);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-mini { padding: 6px 12px; font-size: 12.5px; border-radius: 6px; gap: 5px; }
+
+        .filter-select {
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 600;
+            padding: 9px 34px 9px 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+            min-width: 180px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary-2);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .filter-hint {
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center;
+            padding: 20px 12px;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .modal-overlay.open { opacity: 1; visibility: visible; }
+
+        .modal-box {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 420px;
+            margin: 20px;
+            padding: 24px;
+            transform: translateY(10px);
+            transition: transform 0.2s ease;
+        }
+
+        .modal-overlay.open .modal-box { transform: translateY(0); }
+
+        .modal-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+        .modal-box p { font-size: 14.5px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+
+        /* STATUS MODAL */
+        .status-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .status-modal-overlay.show { opacity: 1; visibility: visible; }
+
+        .status-modal-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 40px 32px;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .status-modal-overlay.show .status-modal-box { transform: scale(1); }
+
+        .status-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 24px auto;
+            position: relative;
+        }
+
+        .status-icon-wrapper.success {
+            background: #ecfdf5;
+            color: #10b981;
+            border: 4px solid #a7f3d0;
+            animation: pulse-green 1s ease-out forwards;
+        }
+
+        .status-icon-wrapper.error {
+            background: #fef2f2;
+            color: #ef4444;
+            border: 4px solid #fecaca;
+            animation: pulse-red 1s ease-out forwards;
+        }
+
+        .status-icon-wrapper i { font-size: 40px; animation: draw-check 0.5s ease-out forwards; }
+
+        @keyframes pulse-green {
+            0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            100% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+        }
+
+        @keyframes pulse-red {
+            0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+            100% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+        }
+
+        @keyframes draw-check {
+            0%   { transform: scale(0);   opacity: 0; }
+            70%  { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1);   opacity: 1; }
+        }
+
+        .status-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .status-message {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .nav-inner { padding: 12px 0; gap: 14px; min-height: 92px; }
+            .nav-toggle { width: 46px; height: 46px; font-size: 19px; }
+            .logo { gap: 16px; }
+            .logo-mark { width: 68px; height: 68px; }
+            .logo-divider { height: 46px; }
+            .logo-text b { font-size: 23px; max-width: 380px; }
+            .logo-text .school-name { font-size: 12.5px; max-width: 380px; }
+            .page-label { font-size: 11.5px; padding: 7px 14px; }
+        }
+
+        @media (max-width: 820px) {
+            .nav-inner { padding: 10px 0; gap: 10px; min-height: 76px; }
+            .logo { gap: 12px; flex: 1; min-width: 0; }
+            .logo-mark { width: 56px; height: 56px; }
+            .logo-divider { height: 40px; }
+            .logo-text b { font-size: 19px; max-width: 240px; }
+            .logo-text .school-name { font-size: 11px; max-width: 240px; }
+            .nav-toggle { width: 44px; height: 44px; font-size: 18px; }
+            .page-label { font-size: 10.5px; padding: 6px 12px; gap: 6px; }
+            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 22px; }
+            .stat-card { padding: 16px; }
+            .stat-card .value { font-size: 26px; }
+            .section { padding: 20px; margin-bottom: 20px; }
+        }
+
+        @media (max-width: 640px) {
+            .container { padding: 0 16px; }
+            .section { padding: 18px 14px; margin-bottom: 18px; }
+            .toggle-panel { flex-direction: column; align-items: stretch; }
+            .nav-inner { padding: 10px 0; gap: 8px; min-height: 66px; }
+            .logo { gap: 10px; }
+            .logo-mark { width: 46px; height: 46px; }
+            .logo-divider { display: none; }
+            .logo-text b { font-size: 16px; max-width: 160px; }
+            .logo-text .school-name { font-size: 10px; max-width: 160px; }
+            .nav-toggle { width: 42px; height: 42px; font-size: 17px; }
+            .page-label { display: none; }
+            .nav-dropdown { width: 250px; }
+            .stats-grid { grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px; }
+            .stat-card { padding: 16px; }
+            .section-head { margin-bottom: 14px; }
+            .section-head h2 { font-size: 16px; }
+            .enroll-controls { flex-wrap: wrap; }
+            .filter-select { width: 100%; }
+        }
+
+        @media (max-width: 400px) {
+            .logo-mark { width: 40px; height: 40px; }
+            .logo-text b { font-size: 14px; max-width: 130px; }
+            .logo-text .school-name { font-size: 9px; max-width: 130px; }
+        }
+    </style>
+</head>
+
+<body>
+    <?php if ($flashSuccess || $flashError): ?>
+        <div class="status-modal-overlay show" id="statusModal">
+            <div class="status-modal-box">
+                <div class="status-icon-wrapper <?php echo $flashSuccess ? 'success' : 'error'; ?>">
+                    <i class="fas <?php echo $flashSuccess ? 'fa-check' : 'fa-exclamation'; ?>"></i>
+                </div>
+                <div class="status-title"><?php echo $flashSuccess ? 'Success!' : 'Error!'; ?></div>
+                <div class="status-message"><?php echo htmlspecialchars($flashSuccess ?: $flashError); ?></div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <header class="nav" id="nav">
+        <div class="container nav-inner">
+            <a href="home.php" class="logo">
+                <div class="logo-mark">
+                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/logo.png"
+                        alt="Eguia National High School logo" onerror="this.style.display='none'">
+                </div>
+                <div class="logo-divider" aria-hidden="true"></div>
+                <div class="logo-text">
+                    <b>CampusLink</b>
+                    <span class="school-name"><?php echo htmlspecialchars($adminSchoolName); ?></span>
+                </div>
+            </a>
+
+            <div class="nav-right">
+                <span class="page-label">Admin Dashboard</span>
+
+                <div class="nav-actions">
+                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    <div class="nav-dropdown" id="navDropdown" role="menu">
+                        <div class="nav-dropdown-head">MENU</div>
+
+                        <a href="dashboard.php" role="menuitem">
+                            <i class="fas fa-house"></i> Dashboard
+                        </a>
+                        <a href="teachers.php" role="menuitem">
+                            <i class="fas fa-chalkboard-user"></i> Teachers
+                        </a>
+                        <div class="nav-dropdown-head"
+                            style="margin-top: 6px; border-top: 1px solid var(--line); padding-top: 10px;">
+                            <?php echo htmlspecialchars($adminDisplayName ?: $adminUser['account_number']); ?>
+                        </div>
+                        <a href="logout.php" role="menuitem">
+                            <i class="fas fa-right-from-bracket"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Students</div>
+                <div class="value"><?php echo number_format($totalStudents); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Total Teachers</div>
+                <div class="value"><?php echo number_format($totalTeachers); ?></div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Subject Assignments</div>
+                <div class="value"><?php echo number_format($totalAssignments); ?></div>
+            </div>
+        </div>
+
+        <section class="section">
+            <div class="section-head">
+                <div>
+                    <h2>Enrollment Window</h2>
+                    <p>Toggle whether Old Students can enroll for S.Y. <?php echo htmlspecialchars($currentYear); ?>.</p>
+                </div>
+            </div>
+            <div class="toggle-panel">
+                <div class="toggle-status">
+                    <label class="switch">
+                        <input type="checkbox" id="enrollmentSwitch" <?php echo $enrollmentOpen ? 'checked' : ''; ?>
+                            onchange="handleToggleChange(this)">
+                        <span class="slider"></span>
+                    </label>
+                    <span id="toggleLabelText"><?php echo $enrollmentOpen ? 'Enrollment is OPEN' : 'Enrollment is CLOSED'; ?></span>
+                </div>
+            </div>
+        </section>
+
+        <?php if (!empty($newStudents)): ?>
+            <section class="section">
+                <div class="section-head">
+                    <div>
+                        <h2>New Students</h2>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>Account #</th>
+                                <th>Full Name</th>
+                                <th>Grade Level</th>
+                                <th>Sex</th>
+                                <th>Enroll (Grade / Section)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($newStudents as $s): ?>
+                                <?php
+                                $sFullName = trim(
+                                    ($s['first_name'] ?? '') . ' ' .
+                                    ($s['middle_name'] ?? '') . ' ' .
+                                    ($s['surname'] ?? '')
+                                );
+                                $sContact = trim((string) ($s['contact_number'] ?? ''));
+                                $sAccount = (string) ($s['account_number'] ?? '');
+                                $currentGrade = (int) ($s['grade_level'] ?? 0);
+                                ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
+                                    <td>
+                                        <div class="name-block">
+                                            <span><?php echo htmlspecialchars($sFullName); ?></span>
+                                            <?php if ($sContact !== ''): ?>
+                                                <span class="contact-sub"><?php echo htmlspecialchars($sContact); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
+                                    <td><?php echo htmlspecialchars($s['sex'] ?? '—'); ?></td>
+                                    <td>
+                                        <div class="enroll-controls">
+                                            <select class="mini-select grade-select"
+                                                id="grade_<?php echo htmlspecialchars($sAccount); ?>"
+                                                data-account="<?php echo htmlspecialchars($sAccount); ?>"
+                                                onchange="updateSections(this)">
+                                                <option value="">Grade</option>
+                                                <?php foreach ($gradeOptions as $g): ?>
+                                                    <option value="<?php echo $g; ?>" <?php echo $currentGrade === (int) $g ? 'selected' : ''; ?>>
+                                                        Grade <?php echo $g; ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <select class="mini-select" id="section_<?php echo htmlspecialchars($sAccount); ?>">
+                                                <option value="">Section</option>
+                                            </select>
+                                            <button type="button" class="btn btn-success btn-mini"
+                                                onclick="openEnrollModal('<?php echo htmlspecialchars($sAccount); ?>', '<?php echo htmlspecialchars(addslashes($sFullName)); ?>')">
+                                                <i class="fas fa-check"></i> Enroll
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        <?php endif; ?>
+
+        <?php if (!empty($transferees)): ?>
+            <section class="section">
+                <div class="section-head">
+                    <div>
+                        <h2>Transferees</h2>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>Account #</th>
+                                <th>Full Name</th>
+                                <th>Grade Level</th>
+                                <th>Sex</th>
+                                <th>Enroll (Grade / Section)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($transferees as $s): ?>
+                                <?php
+                                $sFullName = trim(
+                                    ($s['first_name'] ?? '') . ' ' .
+                                    ($s['middle_name'] ?? '') . ' ' .
+                                    ($s['surname'] ?? '')
+                                );
+                                $sContact = trim((string) ($s['contact_number'] ?? ''));
+                                $sAccount = (string) ($s['account_number'] ?? '');
+                                $currentGrade = (int) ($s['grade_level'] ?? 0);
+                                ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
+                                    <td>
+                                        <div class="name-block">
+                                            <span><?php echo htmlspecialchars($sFullName); ?></span>
+                                            <?php if ($sContact !== ''): ?>
+                                                <span class="contact-sub"><?php echo htmlspecialchars($sContact); ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
+                                    <td><?php echo htmlspecialchars($s['sex'] ?? '—'); ?></td>
+                                    <td>
+                                        <div class="enroll-controls">
+                                            <select class="mini-select grade-select"
+                                                id="grade_<?php echo htmlspecialchars($sAccount); ?>"
+                                                data-account="<?php echo htmlspecialchars($sAccount); ?>"
+                                                onchange="updateSections(this)">
+                                                <option value="">Grade</option>
+                                                <?php foreach ($gradeOptions as $g): ?>
+                                                    <option value="<?php echo $g; ?>" <?php echo $currentGrade === (int) $g ? 'selected' : ''; ?>>
+                                                        Grade <?php echo $g; ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <select class="mini-select" id="section_<?php echo htmlspecialchars($sAccount); ?>">
+                                                <option value="">Section</option>
+                                            </select>
+                                            <button type="button" class="btn btn-success btn-mini"
+                                                onclick="openEnrollModal('<?php echo htmlspecialchars($sAccount); ?>', '<?php echo htmlspecialchars(addslashes($sFullName)); ?>')">
+                                                <i class="fas fa-check"></i> Enroll
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        <?php endif; ?>
+
+        <?php if (!empty($enrolledStudents)): ?>
+            <section class="section">
+                <div class="section-head">
+                    <div>
+                        <h2>Enrolled Students</h2>
+                    </div>
+                    <div>
+                        <form method="GET" action="dashboard.php" id="gradeFilterForm">
+                            <select class="filter-select" name="grade" id="gradeFilter"
+                                onchange="document.getElementById('gradeFilterForm').submit();">
+                                <option value="all" <?php echo $isAllGrades ? 'selected' : ''; ?>>All Levels</option>
+                                <?php foreach ($gradeOptions as $g): ?>
+                                    <option value="<?php echo $g; ?>" <?php echo ($gradeFilter === (string) $g) ? 'selected' : ''; ?>>
+                                        Grade <?php echo $g; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+
+                <?php if (empty($filteredEnrolledStudents)): ?>
+                    <div class="filter-hint">
+                        <i class="fas fa-user-slash" style="margin-right: 6px;"></i>
+                        No enrolled students found<?php echo $isAllGrades ? '' : ' for Grade ' . htmlspecialchars($gradeFilter); ?>.
+                    </div>
+                <?php else: ?>
+                    <div class="table-wrap">
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>Account #</th>
+                                    <th>Full Name</th>
+                                    <th>Grade Level</th>
+                                    <th>Section</th>
+                                    <th>Academic Year</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($filteredEnrolledStudents as $s): ?>
+                                    <?php
+                                    $sFullName = trim(
+                                        ($s['first_name'] ?? '') . ' ' .
+                                        ($s['middle_name'] ?? '') . ' ' .
+                                        ($s['surname'] ?? '')
+                                    );
+                                    $sContact = trim((string) ($s['contact_number'] ?? ''));
+                                    $sAccount = (string) ($s['account_number'] ?? '');
+                                    ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
+                                        <td>
+                                            <div class="name-block">
+                                                <span><?php echo htmlspecialchars($sFullName ?: '—'); ?></span>
+                                                <?php if ($sContact !== ''): ?>
+                                                    <span class="contact-sub"><?php echo htmlspecialchars($sContact); ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
+                                        <td><?php echo htmlspecialchars($s['section'] ?? '—'); ?></td>
+                                        <td><?php echo htmlspecialchars($s['academic_year'] ?? '—'); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </section>
+        <?php endif; ?>
+    </main>
+
+    <div class="modal-overlay" id="enrollmentModal">
+        <div class="modal-box">
+            <h3 id="modalTitle" style="color: #b45309;">WARNING!</h3>
+            <p>You are about to <strong><span id="modalActionText">close</span></strong> the enrollment.<br><br>Please
+                note that once changed, you <strong>cannot open or close</strong> the enrollment again for the next 24
+                hours (1 day).</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeEnrollmentModal()">Cancel</button>
+                <button type="button" class="btn btn-danger" id="modalConfirmBtn"
+                    onclick="confirmEnrollmentToggle()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="enrollModal">
+        <div class="modal-box">
+            <h3 style="color: #1d4ed8;">
+                <i class="fas fa-user-plus" style="margin-right: 6px;"></i> Confirm Enrollment
+            </h3>
+            <p>
+                You are about to enroll <strong id="enrollStudentName">this student</strong> into
+                <strong id="enrollSummary">—</strong>.<br><br>
+                This will add the student to <em>enrolled_students</em> and mark their status as
+                <strong>Enrolled</strong>. This action cannot be undone from this dashboard.
+            </p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeEnrollModal()">Cancel</button>
+                <button type="button" class="btn btn-success" id="enrollConfirmBtn"
+                    onclick="confirmEnrollStudent()">
+                    <i class="fas fa-check"></i> Proceed
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ── NAVBAR ── */
+        const navToggle = document.getElementById('navToggle');
+        const navDropdown = document.getElementById('navDropdown');
+
+        navToggle?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = navDropdown.classList.toggle('open');
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (navDropdown && !navDropdown.contains(e.target) && e.target !== navToggle) {
+                navDropdown.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        /* ── GRADE → SECTION MAP ── */
+        const sectionMap = <?php echo $sectionMapJson; ?>;
+
+        function populateSections(account, selectedGrade, keepCurrent) {
+            const sectionEl = document.getElementById('section_' + account);
+            if (!sectionEl) return;
+
+            const sections = (selectedGrade && sectionMap[selectedGrade])
+                ? sectionMap[selectedGrade]
+                : [];
+
+            const currentVal = keepCurrent ? sectionEl.value : '';
+
+            sectionEl.innerHTML = '';
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Section';
+            sectionEl.appendChild(placeholder);
+
+            if (sections.length === 0) {
+                const none = document.createElement('option');
+                none.value = '';
+                none.textContent = 'Select a grade first';
+                none.disabled = true;
+                sectionEl.appendChild(none);
+                return;
+            }
+
+            sections.forEach((sec) => {
+                const opt = document.createElement('option');
+                opt.value = sec;
+                opt.textContent = sec;
+                if (keepCurrent && sec === currentVal) opt.selected = true;
+                sectionEl.appendChild(opt);
+            });
+        }
+
+        function updateSections(gradeSelect) {
+            const account = gradeSelect.getAttribute('data-account');
+            const selectedGrade = gradeSelect.value;
+            populateSections(account, selectedGrade, false);
+        }
+
+        /* On page load: fill sections for students whose grade is pre-selected */
+        document.querySelectorAll('.grade-select').forEach((gradeSelect) => {
+            const account = gradeSelect.getAttribute('data-account');
+            const selectedGrade = gradeSelect.value;
+            if (selectedGrade) {
+                populateSections(account, selectedGrade, false);
+            }
+        });
+
+        /* ── ENROLLMENT TOGGLE MODAL ── */
+        let currentToggleAction = '';
+        let isOriginalStateOpen = <?php echo $enrollmentOpen ? 'true' : 'false'; ?>;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const switchEl = document.getElementById('enrollmentSwitch');
+        const labelText = document.getElementById('toggleLabelText');
+
+        function handleToggleChange(checkbox) {
+            currentToggleAction = checkbox.checked ? 'open' : 'close';
+
+            const modalActionText = document.getElementById('modalActionText');
+            const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+
+            modalActionText.textContent = currentToggleAction;
+
+            if (currentToggleAction === 'open') {
+                modalConfirmBtn.textContent = 'Open';
+                modalConfirmBtn.className = 'btn btn-success';
+            } else {
+                modalConfirmBtn.textContent = 'Close';
+                modalConfirmBtn.className = 'btn btn-danger';
+            }
+
+            document.getElementById('enrollmentModal').classList.add('open');
+        }
+
+        function closeEnrollmentModal() {
+            switchEl.checked = isOriginalStateOpen;
+            document.getElementById('enrollmentModal').classList.remove('open');
+        }
+
+        function confirmEnrollmentToggle() {
+            document.getElementById('enrollmentModal').classList.remove('open');
+
+            if (currentToggleAction === 'open') {
+                labelText.textContent = 'Enrollment is OPEN';
+                isOriginalStateOpen = true;
+            } else {
+                labelText.textContent = 'Enrollment is CLOSED';
+                isOriginalStateOpen = false;
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '../API_ADMIN/enrollment-opener.php';
+
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'toggle_enrollment';
+            form.appendChild(actionInput);
+
+            const statusInput = document.createElement('input');
+            statusInput.type = 'hidden';
+            statusInput.name = 'new_status';
+            statusInput.value = (currentToggleAction === 'open') ? '1' : '0';
+            form.appendChild(statusInput);
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        document.getElementById('enrollmentModal').addEventListener('click', function (e) {
+            if (e.target === this) closeEnrollmentModal();
+        });
+
+        /* ── AUTO REFRESH AFTER STATUS MODAL ── */
+        const statusModal = document.getElementById('statusModal');
+        if (statusModal) {
+            setTimeout(() => window.location.reload(), 1000);
+        }
+
+        /* ── ENROLL STUDENT MODAL ── */
+        let pendingEnrollAccount = '';
+        let pendingEnrollName = '';
+
+        function openEnrollModal(accountNumber, fullName) {
+            const gradeEl = document.getElementById('grade_' + accountNumber);
+            const sectionEl = document.getElementById('section_' + accountNumber);
+
+            const gradeLevel = gradeEl ? gradeEl.value : '';
+            const section = sectionEl ? sectionEl.value : '';
+
+            if (!gradeLevel) {
+                alert('Please select a grade level (7–12).');
+                return;
+            }
+            if (!section) {
+                alert('Please select a section.');
+                return;
+            }
+
+            pendingEnrollAccount = accountNumber;
+            pendingEnrollName = fullName || 'this student';
+
+            document.getElementById('enrollStudentName').textContent = pendingEnrollName;
+            document.getElementById('enrollSummary').textContent = 'Grade ' + gradeLevel + ' - ' + section;
+
+            document.getElementById('enrollModal').classList.add('open');
+        }
+
+        function closeEnrollModal() {
+            document.getElementById('enrollModal').classList.remove('open');
+            pendingEnrollAccount = '';
+            pendingEnrollName = '';
+        }
+
+        function confirmEnrollStudent() {
+            if (!pendingEnrollAccount) {
+                closeEnrollModal();
+                return;
+            }
+
+            const gradeEl = document.getElementById('grade_' + pendingEnrollAccount);
+            const sectionEl = document.getElementById('section_' + pendingEnrollAccount);
+
+            const gradeLevel = gradeEl ? gradeEl.value : '';
+            const section = sectionEl ? sectionEl.value : '';
+
+            if (!gradeLevel || !section) {
+                closeEnrollModal();
+                return;
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '../API_ADMIN/enroll-students.php';
+
+            const fields = {
+                action: 'enroll_student',
+                account_number: pendingEnrollAccount,
+                grade_level: gradeLevel,
+                section: section,
+                csrf_token: csrfToken
+            };
+
+            for (const [name, value] of Object.entries(fields)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        document.getElementById('enrollModal').addEventListener('click', function (e) {
+            if (e.target === this) closeEnrollModal();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (document.getElementById('enrollModal').classList.contains('open')) closeEnrollModal();
+                if (document.getElementById('enrollmentModal').classList.contains('open')) closeEnrollmentModal();
+            }
+        });
+    </script>
+</body>
+
+</html>
