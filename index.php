@@ -2872,7 +2872,7 @@ try {
                 <div class="hero-brand-row">
                     <div class="hero-brand">
                         <div class="hero-brand-logo">
-                            <img src="Images/logo.png" alt="CampusLink" onerror="this.style.display='none'">
+                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png" alt="CampusLink" onerror="this.style.display='none'">
                         </div>
                         <div class="hero-brand-text">
                             <span class="brand-name">CampusLink</span>
