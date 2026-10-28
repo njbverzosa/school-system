@@ -109,8 +109,6 @@ switch ($action) {
             $stmt = $pdo->prepare("
                 UPDATE students
                 SET enrollment_access = ?
-                WHERE student_type = 'O'
-                  AND enrollment_access <> ?
             ");
             $stmt->execute([$targetAccess, $targetAccess]);
             $affected = $stmt->rowCount();
@@ -120,8 +118,8 @@ switch ($action) {
             setFlash(
                 'success',
                 $targetAccess === 1
-                    ? "Enrollment is now OPEN for Old Students. {$affected} record(s) updated."
-                    : "Enrollment is now CLOSED for Old Students. {$affected} record(s) updated."
+                    ? "Enrollment is now OPEN for All Students."
+                    : "Enrollment is now CLOSED for All Students."
             );
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) {
