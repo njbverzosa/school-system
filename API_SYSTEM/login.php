@@ -122,7 +122,7 @@ if (!in_array($userType, $allowedTypes, true)) {
    Redirect by user type
    ------------------------------------------------------------ */
 if ($userType === 'student') {
-    $enrollmentStatus = strtolower(trim((string) ($foundUser['enrollment_status'] ?? 'not enrolled')));
+    $enrollmentStatus = strtolower(trim((string) ($foundUser['enrollment_status'] ?? 'Not Enrolled')));
     $studentType = strtoupper(trim((string) ($foundUser['student_type'] ?? '')));
 
     if ($enrollmentStatus === 'Enrolled') {
