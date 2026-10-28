@@ -2629,18 +2629,20 @@ try {
             <div class="modal-body">
                 <div class="modal-alert" id="loginAlert"></div>
 
-                <form id="loginForm" novalidate>
+                <!-- Added autocomplete="off" to prevent save password prompts -->
+                <form id="loginForm" novalidate autocomplete="off">
                     <div class="form-group">
                         <label for="loginAccount">Account Number <span class="req">*</span></label>
                         <input type="text" id="loginAccount" name="account_number" placeholder="ACC-1001"
-                            autocomplete="username" required>
+                            autocomplete="off" required>
                         <div class="err-msg" id="loginAccountErr">Ilagay ang account number.</div>
                     </div>
 
                     <div class="form-group">
                         <label for="loginPin">6-Digit PIN <span class="req">*</span></label>
+                        <!-- Changed to autocomplete="new-password" so Chrome doesn't prompt to save it -->
                         <input type="password" id="loginPin" name="pin" class="pin-input" placeholder="••••••"
-                            inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="current-password" required>
+                            inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="new-password" required>
                         <div class="err-msg" id="loginPinErr">Dapat eksaktong 6 digit ang PIN.</div>
                     </div>
 
@@ -3355,6 +3357,10 @@ try {
                 if (data.success) {
                     loginAlert.className = 'modal-alert success show';
                     loginAlert.textContent = 'Matagumpay ang pag-login! Nire-redirect ka...';
+                    
+                    // Clear the form BEFORE redirecting to prevent Google from prompting to save the password
+                    loginForm.reset();
+                    
                     setTimeout(() => {
                         window.location.href = data.redirect || 'dashboard.php';
                     }, 1000);
