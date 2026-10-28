@@ -617,6 +617,16 @@ try {
             transform: translateY(0) scale(1);
         }
 
+        /* Specific override for Login Modal (Shorter Width + 10px Radius) */
+        #loginModal .modal-card {
+            max-width: 380px; /* Shorter width */
+            border-radius: 10px;
+        }
+        
+        #loginModal .modal-head {
+            border-radius: 10px 10px 0 0;
+        }
+
         #registerModal .modal-card {
             max-height: none;
             overflow-y: visible;
@@ -2080,6 +2090,15 @@ try {
                 border-radius: 18px;
                 max-width: 100%;
             }
+            
+            #loginModal .modal-card {
+                max-width: 380px;
+                border-radius: 10px;
+            }
+            
+            #loginModal .modal-head {
+                border-radius: 10px 10px 0 0;
+            }
 
             .modal-head {
                 padding: 22px 20px 18px;
@@ -2498,7 +2517,6 @@ try {
             opacity: .8;
             text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
         }
-
     </style>
 </head>
 
@@ -2507,8 +2525,8 @@ try {
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png" alt="Eguia National High School logo"
-                        onerror="this.style.display='none'">
+                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png"
+                        alt="Eguia National High School logo" onerror="this.style.display='none'">
                 </div>
                 <div class="logo-text">
                     <b>CampusLink</b>
@@ -2591,6 +2609,7 @@ try {
         </div>
     </div>
 
+    <!-- LOGIN MODAL (Shorter Width + Password Masking + No Cancel Button) -->
     <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
         <div class="modal-card">
             <div class="modal-head login-head">
@@ -2617,16 +2636,14 @@ try {
 
                     <div class="form-group">
                         <label for="loginPin">6-Digit PIN <span class="req">*</span></label>
-                        <input type="text" id="loginPin" name="pin" class="pin-input" placeholder="••••••"
+                        <!-- Changed type to "password" so it shows as dots -->
+                        <input type="password" id="loginPin" name="pin" class="pin-input" placeholder="••••••"
                             inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="current-password" required>
                         <div class="err-msg" id="loginPinErr">Dapat eksaktong 6 digit ang PIN.</div>
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn btn-cancel" id="loginCancelBtn">
-                            <i class="fas fa-xmark"></i> Kanselahin
-                        </button>
-                        <button type="submit" class="btn btn-login-submit" id="loginSubmitBtn">
+                        <button type="submit" class="btn btn-login-submit" id="loginSubmitBtn" style="width: 100%;">
                             <i class="fas fa-right-to-bracket"></i> Mag-login
                         </button>
                     </div>
@@ -2900,7 +2917,8 @@ try {
                 <div class="hero-brand-row">
                     <div class="hero-brand">
                         <div class="hero-brand-logo">
-                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png" alt="CampusLink" onerror="this.style.display='none'">
+                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png"
+                                alt="CampusLink" onerror="this.style.display='none'">
                         </div>
                         <div class="hero-brand-text">
                             <span class="brand-name">CampusLink</span>
@@ -2957,7 +2975,7 @@ try {
             <div class="section-head center reveal">
                 <span class="eyebrow">Serbisyo</span>
                 <h2 class="section-title">Lahat ng serbisyo, isang click lang</h2>
-                
+
             </div>
 
             <div class="svc-grid">
@@ -3104,8 +3122,8 @@ try {
                 <div>
                     <a href="#" class="logo">
                         <div class="logo-mark">
-                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png" alt="Eguia National High School logo"
-                                onerror="this.style.display='none'">
+                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/logo.png"
+                                alt="Eguia National High School logo" onerror="this.style.display='none'">
                         </div>
                         <div class="logo-text">
                             <b>Campus Link</b>
@@ -3161,7 +3179,7 @@ try {
 
     <!-- DEVTOOLS DETECTION OVERLAY -->
     <div id="hackOverlay" role="alert" aria-live="assertive">
-        <div class="hack-note">Wag mo ng ituloy ang binabalak mo</div>
+        <div class="hack-note">Uy, bawal mag-inspect! 👀 I-close ang DevTools para makapagpatuloy.</div>
     </div>
 
     <script>
@@ -3242,7 +3260,6 @@ try {
         const loginOpenBtn = document.getElementById('loginOpenBtn');
         const mobileLoginBtn = document.getElementById('mobileLoginBtn');
         const loginModalClose = document.getElementById('loginModalClose');
-        const loginCancelBtn = document.getElementById('loginCancelBtn');
         const loginForm = document.getElementById('loginForm');
         const loginSubmitBtn = document.getElementById('loginSubmitBtn');
         const loginAlert = document.getElementById('loginAlert');
@@ -3290,15 +3307,10 @@ try {
             });
         });
 
+        // Close via X button only
         loginModalClose.addEventListener('click', closeLoginModal);
-        loginCancelBtn.addEventListener('click', closeLoginModal);
-        loginModal.addEventListener('click', (e) => {
-            if (e.target === loginModal) closeLoginModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && loginModal.classList.contains('show')) closeLoginModal();
-        });
 
+        // Restrict PIN input to numbers only
         loginPinInput.addEventListener('input', (e) => {
             e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
         });
@@ -3764,9 +3776,9 @@ try {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('#filterTabs button').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                 
-                 
-                 
+
+
+
                 currentFilter = btn.dataset.filter;
                 renderSchools();
             });
