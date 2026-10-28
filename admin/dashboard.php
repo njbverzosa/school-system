@@ -144,6 +144,7 @@ try {
 
 /* ------------------------------------------------------------
    Students for Enrollment — single combined list
+   (includes LRN + profile photo from students via LEFT JOIN)
    ------------------------------------------------------------ */
 $studentsForEnrollment = [];
 try {
@@ -164,6 +165,9 @@ try {
             s.student_type,
             s.registered_date,
             s.enrollment_status,
+            s.lrn,
+            s.student_lrn,
+            s.profile_account,
             e.section        AS pending_section,
             e.academic_year  AS pending_academic_year,
             e.status         AS enrollment_record_status
@@ -1228,7 +1232,7 @@ function studentTypeBadgeClass(string $t): string
             </div>
         </section>
 
-        <?php /* Single combined table (Old, New, Transferee) with camera Action */ ?>
+        <?php /* Students for Enrollment — now with LRN + ID Picture */ ?>
         <?php if (!empty($studentsForEnrollment)): ?>
             <section class="section">
                 <div class="section-head">
@@ -1243,10 +1247,12 @@ function studentTypeBadgeClass(string $t): string
                             <tr>
                                 <th>Account #</th>
                                 <th>Full Name</th>
+                                <th>LRN</th>
                                 <th>Type</th>
                                 <th>Grade Level</th>
                                 <th>Sex</th>
                                 <th>Status</th>
+                                <th>ID Picture</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -1260,8 +1266,18 @@ function studentTypeBadgeClass(string $t): string
                                 );
                                 $sContact = trim((string) ($s['contact_number'] ?? ''));
                                 $sAccount = (string) ($s['account_number'] ?? '');
-                                $sType = (string) ($s['student_type'] ?? '');
+                                $sType    = (string) ($s['student_type'] ?? '');
                                 $isPendingRow = (strtolower((string) ($s['enrollment_record_status'] ?? '')) === 'pending');
+
+                                /* Prefer lrn; fall back to student_lrn */
+                                $sLrn = trim((string) ($s['lrn'] ?? ''));
+                                if ($sLrn === '') {
+                                    $sLrn = trim((string) ($s['student_lrn'] ?? ''));
+                                }
+
+                                /* profile_account stores the filename only */
+                                $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
+                                $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
                                 ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
@@ -1273,6 +1289,7 @@ function studentTypeBadgeClass(string $t): string
                                             <?php endif; ?>
                                         </div>
                                     </td>
+                                    <td><?php echo htmlspecialchars($sLrn !== '' ? $sLrn : '—'); ?></td>
                                     <td>
                                         <span class="type-badge <?php echo htmlspecialchars(studentTypeBadgeClass($sType)); ?>">
                                             <?php echo htmlspecialchars(studentTypeLabel($sType)); ?>
@@ -1287,6 +1304,19 @@ function studentTypeBadgeClass(string $t): string
                                             </span>
                                         <?php else: ?>
                                             <span class="type-badge type-default">Not Enrolled</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($sPhotoUrl !== ''): ?>
+                                            <a href="<?php echo htmlspecialchars($sPhotoUrl); ?>" target="_blank" rel="noopener"
+                                               class="id-photo-link" title="View ID picture">
+                                                <img src="<?php echo htmlspecialchars($sPhotoUrl); ?>"
+                                                     alt="ID picture of <?php echo htmlspecialchars($sFullName ?: $sAccount); ?>"
+                                                     class="id-photo-thumb"
+                                                     onerror="this.parentElement.innerHTML='<span class=&quot;id-photo-missing&quot;>No photo</span>';">
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="id-photo-missing">No photo</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -1359,7 +1389,7 @@ function studentTypeBadgeClass(string $t): string
                                     $sContact = trim((string) ($s['contact_number'] ?? ''));
                                     $sAccount = (string) ($s['account_number'] ?? '');
 
-                                    /* Prefer `lrn`; fall back to `student_lrn` if `lrn` is empty */
+                                    /* Prefer lrn; fall back to student_lrn */
                                     $sLrn = trim((string) ($s['lrn'] ?? ''));
                                     if ($sLrn === '') {
                                         $sLrn = trim((string) ($s['student_lrn'] ?? ''));
