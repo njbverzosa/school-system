@@ -264,8 +264,6 @@ if ($effectiveGrade === '' && !empty($user['grade_level'])) {
 
 /* ------------------------------------------------------------
    PENDING STATE
-   - enrolled_students.status == 'Pending'
-   - OR students.enrollment_status == 'Pending'
    ------------------------------------------------------------ */
 $recordStatusRaw = $enrollmentRecord
     ? strtolower(trim((string) ($enrollmentRecord['status'] ?? '')))
@@ -296,7 +294,7 @@ try {
 }
 
 /* ------------------------------------------------------------
-   FETCH ADVISER (advisory = 1)
+   FETCH ADVISER
    ------------------------------------------------------------ */
 $adviserName = '';
 $adviserAccount = '';
@@ -435,11 +433,19 @@ unset($_SESSION['flash']['just_enrolled']);
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
+            background-color: #1f2327;
+            background-image:
+                linear-gradient(rgba(15, 23, 42, .18), rgba(15, 23, 42, .18)),
+                url('../Images/Colorful_Back_to_School_Stationery_Border.png');
+            background-size: cover;
+            background-position: center top;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            min-height: 100vh;
         }
 
         img,
@@ -473,35 +479,74 @@ unset($_SESSION['flash']['just_enrolled']);
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(255, 255, 255, .96);
-            backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--line);
+            background: #08285f;
+            border-bottom: 0;
+            overflow: visible;
+            isolation: isolate;
+        }
+
+        .nav::before,
+        .nav::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 250px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .nav::before {
+            left: -90px;
+            background:
+                linear-gradient(55deg,
+                    transparent 0 24%,
+                    #9b1536 24% 34%,
+                    #f8c324 34% 42%,
+                    #2058c8 42% 56%,
+                    transparent 56% 100%);
+        }
+
+        .nav::after {
+            right: -90px;
+            transform: scaleX(-1);
+            background:
+                linear-gradient(55deg,
+                    transparent 0 24%,
+                    #9b1536 24% 34%,
+                    #f8c324 34% 42%,
+                    #2058c8 42% 56%,
+                    transparent 56% 100%);
         }
 
         .nav-inner {
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 18px;
-            padding: 14px 0;
-            min-height: 108px;
+            padding: 10px 0;
+            min-height: 120px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 22px;
             min-width: 0;
             text-decoration: none;
             flex-shrink: 1;
         }
 
         .logo-mark {
-            width: 80px;
-            height: 80px;
+            width: 191px;
+            height: 107px;
             flex-shrink: 0;
             display: grid;
             place-items: center;
+            overflow: hidden;
+            background: #08285f;
+            border-radius: 2px;
         }
 
         .logo-mark img {
@@ -512,10 +557,7 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         .logo-divider {
-            width: 1px;
-            height: 54px;
-            background: var(--line);
-            flex-shrink: 0;
+            display: none;
         }
 
         .logo-text {
@@ -524,37 +566,28 @@ unset($_SESSION['flash']['just_enrolled']);
             justify-content: center;
             line-height: 1.1;
             min-width: 0;
-            gap: 3px;
+            gap: 0;
         }
 
         .logo-text b {
             font-family: 'Poppins', sans-serif;
-            font-size: 26px;
+            font-size: 30px;
             font-weight: 800;
-            color: var(--text);
-            letter-spacing: -.02em;
+            color: #fff;
+            letter-spacing: .01em;
             line-height: 1.1;
+            text-transform: uppercase;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 480px;
         }
 
         .logo-text .school-name {
-            font-size: 13.5px;
-            font-weight: 500;
-            color: var(--muted);
-            line-height: 1.25;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 480px;
+            display: none;
         }
 
         .nav-right {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 18px;
             flex-shrink: 0;
         }
 
@@ -562,12 +595,12 @@ unset($_SESSION['flash']['just_enrolled']);
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 12.5px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: .1em;
-            color: var(--primary-dark);
-            padding: 8px 16px;
+            letter-spacing: .08em;
+            color: #fff;
+            padding: 8px 10px;
             white-space: nowrap;
         }
 
@@ -576,25 +609,27 @@ unset($_SESSION['flash']['just_enrolled']);
             align-items: center;
             position: relative;
             flex-shrink: 0;
+            z-index: 201;
         }
 
         .nav-toggle {
             display: grid;
-            width: 48px;
-            height: 48px;
-            border-radius: var(--radius);
-            background: #f1f5f9;
-            border: 1px solid var(--line);
-            color: var(--text);
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            background: #f8fafc;
+            border: 0;
+            color: #0f172a;
             cursor: pointer;
             place-items: center;
-            font-size: 20px;
+            font-size: 24px;
             transition: background .18s, color .18s, transform .18s;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
         }
 
         .nav-toggle:hover {
-            background: #eef2ff;
-            color: var(--primary-dark);
+            background: #fff;
+            color: #08285f;
         }
 
         .nav-toggle:active {
@@ -603,13 +638,13 @@ unset($_SESSION['flash']['just_enrolled']);
 
         .nav-dropdown {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 12px);
             right: 0;
             left: auto;
             width: 280px;
             background: #fff;
             border: 1px solid var(--line);
-            border-radius: var(--radius);
+            border-radius: 12px;
             box-shadow: var(--shadow-md);
             padding: 8px;
             z-index: 200;
@@ -642,7 +677,7 @@ unset($_SESSION['flash']['just_enrolled']);
             align-items: center;
             gap: 12px;
             padding: 12px 14px;
-            border-radius: var(--radius);
+            border-radius: 8px;
             color: var(--text);
             font-size: 15px;
             font-weight: 500;
@@ -672,15 +707,15 @@ unset($_SESSION['flash']['just_enrolled']);
 
         /* PANEL */
         .panel {
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-md);
-            padding: 28px;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+            padding: 0;
             margin: 30px 0 60px;
         }
 
-        /* Welcome card (Pending / New Student / Transferee) */
+        /* Welcome card */
         .welcome-card {
             display: flex;
             flex-direction: column;
@@ -688,9 +723,10 @@ unset($_SESSION['flash']['just_enrolled']);
             text-align: center;
             gap: 14px;
             padding: 40px 24px;
-            border-radius: var(--radius);
-            border: 1px solid var(--line);
-            background: linear-gradient(135deg, #f8fafc, #eef2ff);
+            border-radius: 0;
+            border: 0;
+            background: transparent;
+            box-shadow: none;
         }
 
         .welcome-card .welcome-icon {
@@ -800,20 +836,18 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         .enrolled-summary .summary-row .value.muted-value {
-            color: #94a3b8;
+            color: #0781fa;
             font-weight: 500;
             font-style: italic;
         }
 
-        /* ── Status pill — no background, Facebook-style verified check ── */
+        /* Status pill */
         .status-pill {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 0;
-            border-radius: 0;
-            background: transparent;
-            border: none;
+            padding: 3px 12px;
+            border-radius: 999px;
             font-family: 'Inter', sans-serif;
             font-size: 12.5px;
             font-weight: 700;
@@ -821,40 +855,12 @@ unset($_SESSION['flash']['just_enrolled']);
             line-height: 1.6;
         }
 
-        /* The "verified" check — blue circle + white check */
-        .status-pill .verified-badge {
-            display: inline-grid;
-            place-items: center;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #5ad7e7;
-            color: #ffffff;
-            font-size: 10px;
-            flex-shrink: 0;
-        }
-
-        .status-pill .verified-badge i {
-            font-size: 9px;
-            line-height: 1;
-        }
-
-        /* Color the text per state (no background/border) */
-        .status-pill.enrolled {
-            color: #166534;
-        }
-
         .status-pill.pending {
+            background: #fef3c7;
             color: #92400e;
+            border: 1px solid #fde68a;
         }
 
-        /* Pending uses an hourglass, not the blue check */
-        .status-pill.pending .verified-badge {
-            background: transparent;
-            color: #b45309;
-            box-shadow: none;
-            font-size: 14px;
-        }
 
         /* SUBJECTS */
         .subjects-section {
@@ -875,7 +881,7 @@ unset($_SESSION['flash']['just_enrolled']);
         .subjects-head h3 {
             font-size: 15px;
             font-weight: 700;
-            color: var(--text);
+            color: black;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -889,55 +895,74 @@ unset($_SESSION['flash']['just_enrolled']);
         .subjects-count {
             font-size: 12px;
             color: var(--muted);
-            background: #f1f5f9;
             border: 1px solid var(--line);
             padding: 3px 10px;
             border-radius: 999px;
             font-weight: 600;
         }
 
-        .subjects-wrap {
+        /* Card container for My Subjects — same background as Enrollment Details */
+        .subjects-table-container {
             width: 100%;
-            overflow-x: auto;
-            border: 1px solid var(--line);
+            padding: 24px 20px;
             border-radius: var(--radius);
-            -webkit-overflow-scrolling: touch;
+            border: 1px solid rgba(255, 255, 255, .3);
+            background: rgba(8, 40, 95, .72);
+            box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .35);
         }
 
+        /* Inner scroll wrapper — holds the faded whitesmoke surface */
+        .subjects-table-container .subjects-wrap {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, .05);
+            /* Slightly faded whitesmoke background */
+            background: rgba(245, 245, 245, 0.85);
+        }
+
+        /* Table — transparent */
         table.subjects {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
+            background: transparent;
         }
 
+        /* Faded header background */
         table.subjects thead {
-            background: #f1f5f9;
+            background: rgba(226, 232, 240, 0.6);
         }
 
+        /* Faded body text and borders */
         table.subjects th,
         table.subjects td {
             padding: 12px 16px;
             text-align: left;
-            border-bottom: 1px solid var(--line);
+            border-bottom: 1px solid rgba(215, 221, 229, 0.5);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: rgba(15, 23, 42, 0.65) !important;
         }
 
+        /* Faded header text */
         table.subjects th {
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .08em;
-            color: #64748b;
+            color: rgba(51, 65, 85, 0.6) !important;
         }
 
         table.subjects tbody tr:last-child td {
             border-bottom: none;
         }
 
-        table.subjects tbody tr:hover {
-            background: #f8fafc;
+        /* Faded hover effect */
+        table.subjects tbody tr:hover td {
+            background: rgba(238, 241, 245, 0.5);
         }
 
         .empty-subjects {
@@ -1017,18 +1042,76 @@ unset($_SESSION['flash']['just_enrolled']);
             padding: 0 20px;
         }
 
+        /* GLOBAL WHITE TEXT */
+        body,
+        body :where(h1, h2, h3, h4, h5, h6, p, span, div, a, button, label, strong, b, small, th, td, li, i, em, code) {
+            color: #ffffff !important;
+        }
+
+        /* Nav dropdown readable */
+        .nav-dropdown {
+            background: #08285f;
+            border-color: rgba(255, 255, 255, .22);
+        }
+
+        .nav-dropdown-head {
+            color: #ffffff !important;
+            border-bottom-color: rgba(255, 255, 255, .22);
+        }
+
+        .nav-dropdown a:hover,
+        .nav-dropdown button:hover {
+            background: rgba(255, 255, 255, .14);
+            color: #ffffff !important;
+        }
+
+        .nav-dropdown a i,
+        .nav-dropdown button i {
+            color: #ffffff !important;
+        }
+
+        .nav-toggle {
+            color: #ffffff !important;
+            background: #123b78;
+        }
+
+        .nav-toggle:hover {
+            background: #1d4e89;
+            color: #ffffff !important;
+        }
+
+        .enrolled-summary {
+            background: rgba(8, 40, 95, .72);
+            border-color: rgba(255, 255, 255, .3);
+        }
+
+        .subjects-count,
+        .welcome-card .account-box {
+            background: rgba(8, 40, 95, .78);
+            border-color: rgba(255, 255, 255, .3);
+        }
+
+        .status-pill.pending,
+        .status-pill.enrolled {
+            color: greenyellow !important;
+        }
+
+        /* Faded whitesmoke table text — overrides the global white !important */
+        .subjects-table-container table.subjects,
+        .subjects-table-container table.subjects :where(th, td, span, a, b, strong, i, em, code, p, div) {
+            color: rgba(15, 23, 42, 0.65) !important;
+        }
+
+        .subjects-table-container table.subjects th {
+            color: rgba(51, 65, 85, 0.6) !important;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 1024px) {
             .nav-inner {
-                padding: 12px 0;
+                padding: 10px 0;
                 gap: 14px;
-                min-height: 92px;
-            }
-
-            .nav-toggle {
-                width: 46px;
-                height: 46px;
-                font-size: 19px;
+                min-height: 100px;
             }
 
             .logo {
@@ -1036,35 +1119,26 @@ unset($_SESSION['flash']['just_enrolled']);
             }
 
             .logo-mark {
-                width: 68px;
-                height: 68px;
-            }
-
-            .logo-divider {
-                height: 46px;
+                width: 150px;
+                height: 84px;
             }
 
             .logo-text b {
-                font-size: 23px;
-                max-width: 380px;
+                font-size: 25px;
             }
 
-            .logo-text .school-name {
-                font-size: 12.5px;
-                max-width: 380px;
-            }
-
-            .page-label {
-                font-size: 11.5px;
-                padding: 7px 14px;
+            .nav-toggle {
+                width: 54px;
+                height: 54px;
+                font-size: 22px;
             }
         }
 
         @media (max-width: 820px) {
             .nav-inner {
-                padding: 10px 0;
+                padding: 8px 0;
                 gap: 10px;
-                min-height: 76px;
+                min-height: 82px;
             }
 
             .logo {
@@ -1074,34 +1148,24 @@ unset($_SESSION['flash']['just_enrolled']);
             }
 
             .logo-mark {
-                width: 56px;
-                height: 56px;
-            }
-
-            .logo-divider {
-                height: 40px;
+                width: 125px;
+                height: 70px;
             }
 
             .logo-text b {
-                font-size: 19px;
-                max-width: 240px;
-            }
-
-            .logo-text .school-name {
-                font-size: 11px;
-                max-width: 240px;
+                font-size: 21px;
             }
 
             .nav-toggle {
-                width: 44px;
-                height: 44px;
-                font-size: 18px;
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                border-radius: 12px;
             }
 
             .page-label {
-                font-size: 10.5px;
-                padding: 6px 12px;
-                gap: 6px;
+                font-size: 11px;
+                padding: 6px 8px;
             }
         }
 
@@ -1111,38 +1175,30 @@ unset($_SESSION['flash']['just_enrolled']);
             }
 
             .nav-inner {
-                padding: 10px 0;
+                padding: 7px 0;
                 gap: 8px;
-                min-height: 66px;
+                min-height: 68px;
             }
 
             .logo {
-                gap: 10px;
+                gap: 8px;
             }
 
             .logo-mark {
-                width: 46px;
-                height: 46px;
-            }
-
-            .logo-divider {
-                display: none;
+                width: 100px;
+                height: 56px;
             }
 
             .logo-text b {
                 font-size: 16px;
-                max-width: 160px;
-            }
-
-            .logo-text .school-name {
-                font-size: 10px;
-                max-width: 160px;
+                max-width: 145px;
             }
 
             .nav-toggle {
                 width: 42px;
                 height: 42px;
                 font-size: 17px;
+                border-radius: 10px;
             }
 
             .page-label {
@@ -1154,7 +1210,7 @@ unset($_SESSION['flash']['just_enrolled']);
             }
 
             .panel {
-                padding: 20px 16px;
+                padding: 0;
                 margin: 20px 0 40px;
             }
 
@@ -1205,22 +1261,35 @@ unset($_SESSION['flash']['just_enrolled']);
             .spinner-overlay .spinner-sub {
                 font-size: 12.5px;
             }
+
+            .subjects-table-container {
+                padding: 18px 14px;
+            }
         }
 
         @media (max-width: 400px) {
+            .nav::before,
+            .nav::after {
+                width: 150px;
+            }
+
             .logo-mark {
-                width: 40px;
-                height: 40px;
+                width: 88px;
+                height: 49px;
             }
 
             .logo-text b {
                 font-size: 14px;
-                max-width: 130px;
+                max-width: 125px;
             }
 
-            .logo-text .school-name {
-                font-size: 9px;
-                max-width: 130px;
+            .nav-toggle {
+                width: 40px;
+                height: 40px;
+            }
+
+            .subjects-table-container {
+                padding: 14px 10px;
             }
         }
     </style>
@@ -1239,12 +1308,12 @@ unset($_SESSION['flash']['just_enrolled']);
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/logo.png"
-                        alt="Eguia National High School logo" onerror="this.style.display='none'">
+                    <img src="../Images/campuslink-logo-navy.png" alt="Eguia National High School logo"
+                        onerror="this.style.display='none'">
                 </div>
                 <div class="logo-divider" aria-hidden="true"></div>
                 <div class="logo-text">
-                    <b>CampusLink</b>
+                    <b>Campus Link</b>
                     <span class="school-name">Eguia National High School</span>
                 </div>
             </a>
@@ -1275,7 +1344,6 @@ unset($_SESSION['flash']['just_enrolled']);
                         <a href="my-profile.php" role="menuitem">
                             <i class="fas fa-folder-open"></i> Master File
                         </a>
-
 
                         <div style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px;">
                             <a href="logout.php" role="menuitem" style="color: #b91c1c;">
@@ -1316,12 +1384,6 @@ unset($_SESSION['flash']['just_enrolled']);
                     <!-- ENROLLMENT DETAILS -->
                     <div class="enrolled-summary">
                         <h3>Enrollment Details</h3>
-
-                        <div class="summary-row">
-                            <span class="label">Student Name</span>
-                            <span class="dash">-</span>
-                            <span class="value"><?php echo htmlspecialchars($displayName !== '' ? $displayName : '—'); ?></span>
-                        </div>
 
                         <div class="summary-row">
                             <span class="label">Account Number</span>
@@ -1371,9 +1433,7 @@ unset($_SESSION['flash']['just_enrolled']);
                             <span class="dash">-</span>
                             <span class="value">
                                 <span class="status-pill enrolled">
-                                    <span class="verified-badge" aria-label="Verified">
-                                        <i class="fas fa-check"></i>
-                                    </span>
+                                    <i class="fas fa-circle-check"></i>
                                     <?php echo htmlspecialchars($displayStatus ?: 'Enrolled'); ?>
                                 </span>
                             </span>
@@ -1406,66 +1466,68 @@ unset($_SESSION['flash']['just_enrolled']);
                                 <?php endif; ?>
                             </div>
                         <?php else: ?>
-                            <div class="subjects-wrap">
-                                <table class="subjects">
-                                    <thead>
-                                        <tr>
-                                            <th>Subject</th>
-                                            <th>Adviser</th>
-                                            <th>Schedule</th>
-                                            <th>Time</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($studentSubjects as $i => $s): ?>
-                                            <?php
-                                            $teacherFullName = resolveTeacherNameFromJoin($s);
-
-                                            $daysRaw = trim((string) ($s['days'] ?? ''));
-                                            $daysList = $daysRaw !== '' ? array_map('trim', explode(',', $daysRaw)) : [];
-                                            $daysShort = [];
-
-                                            foreach ($daysList as $d) {
-                                                if ($d !== '') {
-                                                    $daysShort[] = formatDayShort($d);
-                                                }
-                                            }
-
-                                            $daysDisplay = implode(', ', $daysShort);
-
-                                            $startTime = trim((string) ($s['start_time'] ?? ''));
-                                            $endTime = trim((string) ($s['end_time'] ?? ''));
-
-                                            $start12 = formatTime12h($startTime);
-                                            $end12 = formatTime12h($endTime);
-
-                                            $timeText = '';
-                                            if ($start12 !== '' || $end12 !== '') {
-                                                $timeText = $start12;
-                                                if ($start12 !== '' && $end12 !== '') {
-                                                    $timeText .= ' – ';
-                                                }
-                                                $timeText .= $end12;
-                                            }
-                                            if ($timeText === '') {
-                                                $timeText = '—';
-                                            }
-                                            ?>
+                            <div class="subjects-table-container">
+                                <div class="subjects-wrap">
+                                    <table class="subjects">
+                                        <thead>
                                             <tr>
-                                                <td><?php echo htmlspecialchars($s['subject'] ?? '—'); ?></td>
-                                                <td title="<?php echo htmlspecialchars($teacherFullName); ?>">
-                                                    <?php echo htmlspecialchars($teacherFullName); ?>
-                                                </td>
-                                                <td title="<?php echo htmlspecialchars($daysRaw !== '' ? $daysRaw : '—'); ?>">
-                                                    <?php echo htmlspecialchars($daysDisplay !== '' ? $daysDisplay : '—'); ?>
-                                                </td>
-                                                <td title="<?php echo htmlspecialchars($timeText); ?>">
-                                                    <?php echo htmlspecialchars($timeText); ?>
-                                                </td>
+                                                <th>Subject</th>
+                                                <th>Adviser</th>
+                                                <th>Schedule</th>
+                                                <th>Time</th>
                                             </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($studentSubjects as $i => $s): ?>
+                                                <?php
+                                                $teacherFullName = resolveTeacherNameFromJoin($s);
+
+                                                $daysRaw = trim((string) ($s['days'] ?? ''));
+                                                $daysList = $daysRaw !== '' ? array_map('trim', explode(',', $daysRaw)) : [];
+                                                $daysShort = [];
+
+                                                foreach ($daysList as $d) {
+                                                    if ($d !== '') {
+                                                        $daysShort[] = formatDayShort($d);
+                                                    }
+                                                }
+
+                                                $daysDisplay = implode(', ', $daysShort);
+
+                                                $startTime = trim((string) ($s['start_time'] ?? ''));
+                                                $endTime = trim((string) ($s['end_time'] ?? ''));
+
+                                                $start12 = formatTime12h($startTime);
+                                                $end12 = formatTime12h($endTime);
+
+                                                $timeText = '';
+                                                if ($start12 !== '' || $end12 !== '') {
+                                                    $timeText = $start12;
+                                                    if ($start12 !== '' && $end12 !== '') {
+                                                        $timeText .= ' – ';
+                                                    }
+                                                    $timeText .= $end12;
+                                                }
+                                                if ($timeText === '') {
+                                                    $timeText = '—';
+                                                }
+                                                ?>
+                                                <tr>
+                                                    <td><?php echo htmlspecialchars($s['subject'] ?? '—'); ?></td>
+                                                    <td title="<?php echo htmlspecialchars($teacherFullName); ?>">
+                                                        <?php echo htmlspecialchars($teacherFullName); ?>
+                                                    </td>
+                                                    <td title="<?php echo htmlspecialchars($daysRaw !== '' ? $daysRaw : '—'); ?>">
+                                                        <?php echo htmlspecialchars($daysDisplay !== '' ? $daysDisplay : '—'); ?>
+                                                    </td>
+                                                    <td title="<?php echo htmlspecialchars($timeText); ?>">
+                                                        <?php echo htmlspecialchars($timeText); ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         <?php endif; ?>
                     </div>

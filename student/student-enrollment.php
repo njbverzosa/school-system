@@ -187,7 +187,14 @@ unset($_SESSION['flash']['just_enrolled']);
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
+            background-color: #0f172a;
+            background-image:
+                linear-gradient(rgba(15, 23, 42, .18), rgba(15, 23, 42, .18)),
+                url('../Images/school-hallway.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
@@ -198,6 +205,14 @@ unset($_SESSION['flash']['just_enrolled']);
 
         main {
             flex: 1 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                background-attachment: scroll;
+                background-position: center center;
+            }
         }
 
         img, svg { display: block; }
@@ -221,9 +236,10 @@ unset($_SESSION['flash']['just_enrolled']);
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(255, 255, 255, .96);
+            background: rgba(255, 255, 255, .82);
             backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--line);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(255,255,255,.45);
         }
 
         .nav-inner {
@@ -253,6 +269,7 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         .logo-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
 
         .logo-divider {
             width: 1px;
@@ -423,23 +440,27 @@ unset($_SESSION['flash']['just_enrolled']);
 
         /* PANEL */
         .panel {
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-md);
-            padding: 28px;
-            margin: 30px 0 60px;
+            background: rgba(255, 255, 255, .88);
+            border: 1px solid rgba(255, 255, 255, .78);
+            border-radius: 18px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, .20);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 34px;
+            margin: 34px auto 60px;
             width: 100%;
+            max-width: 1440px;
             min-height: calc(100vh - 260px);
         }
 
         /* WELCOME CARD */
         .welcome-card {
             text-align: center;
-            padding: 44px 28px;
-            border-radius: var(--radius);
-            background: linear-gradient(135deg, #eff6ff, #dbeafe);
-            border: 1px solid #bfdbfe;
+            padding: 56px 28px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(239, 246, 255, .92), rgba(219, 234, 254, .88));
+            border: 1px solid rgba(147, 197, 253, .78);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
         }
 
         .welcome-card.is-closed {
@@ -498,6 +519,16 @@ unset($_SESSION['flash']['just_enrolled']);
             font-family: 'Poppins';
             font-weight: 800;
             letter-spacing: .04em;
+        }
+
+        .welcome-card > .account-box + .account-box {
+            margin-left: 8px;
+        }
+
+        @media (min-width: 641px) {
+            .welcome-card .account-box {
+                margin-bottom: 26px;
+            }
         }
 
         .section-picker {
@@ -662,13 +693,27 @@ unset($_SESSION['flash']['just_enrolled']);
             .nav-toggle { width: 42px; height: 42px; font-size: 17px; }
             .page-label { display: none; }
             .nav-dropdown { width: 250px; }
-            .panel { padding: 20px 16px; margin: 20px 0 40px; min-height: calc(100vh - 200px); }
-            .welcome-card { padding: 30px 18px; }
+            .panel {
+                padding: 14px;
+                margin: 16px 0 32px;
+                min-height: calc(100vh - 170px);
+                border-radius: 14px;
+            }
+            .welcome-card {
+                padding: 34px 16px;
+                border-radius: 10px;
+            }
             .welcome-card h2 { font-size: 20px; }
             .welcome-card p { font-size: 14px; }
             .welcome-card .welcome-icon { width: 62px; height: 62px; font-size: 26px; margin-bottom: 18px; }
             .welcome-actions .btn { width: 100%; }
             .section-picker { max-width: 100%; }
+            .welcome-card .account-box {
+                display: flex;
+                width: 100%;
+                justify-content: center;
+                margin: 0 0 10px !important;
+            }
             .spinner { width: 52px; height: 52px; border-width: 4px; }
             .spinner-overlay .spinner-title { font-size: 16px; }
             .spinner-overlay .spinner-sub { font-size: 12.5px; }
@@ -679,6 +724,575 @@ unset($_SESSION['flash']['just_enrolled']);
             .logo-text b { font-size: 14px; max-width: 130px; }
             .logo-text .school-name { font-size: 9px; max-width: 130px; }
         }
+    
+/* RESPONSIVE SCHOOL HALLWAY BACKGROUND */
+html, body {
+    min-height: 100%;
+}
+
+body {
+    position: relative;
+    isolation: isolate;
+    background-color: #0a1a33;
+    background-image: url("../Images/school-hallway.jpg");
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(4, 18, 42, .42) 0%,
+            rgba(4, 18, 42, .24) 45%,
+            rgba(4, 18, 42, .50) 100%
+        );
+    pointer-events: none;
+}
+
+/* Phones: fixed backgrounds can behave poorly on iOS/Android browsers.
+   Keep the image covering the viewport and center its important area. */
+@media (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        background-position: center center;
+        min-height: 100svh;
+    }
+
+    body::before {
+        position: absolute;
+        min-height: 100%;
+    }
+}
+
+/* Very narrow/tall phones */
+@media (max-width: 430px) {
+    body {
+        background-position: 50% center;
+        background-size: cover;
+    }
+}
+
+/* Short landscape phones */
+@media (max-height: 500px) and (orientation: landscape) {
+    body {
+        background-position: center 42%;
+    }
+}
+
+    
+/* MODERN RESPONSIVE BUTTONS */
+.btn {
+    position: relative;
+    min-height: 50px;
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, .28);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease,
+        filter .2s ease,
+        background .2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -110%;
+    width: 65%;
+    height: 100%;
+    background: linear-gradient(
+        100deg,
+        transparent,
+        rgba(255,255,255,.35),
+        transparent
+    );
+    transform: skewX(-18deg);
+    transition: left .55s ease;
+}
+
+.btn:hover::before {
+    left: 140%;
+}
+
+.btn i {
+    font-size: 16px;
+    transition: transform .2s ease;
+}
+
+.btn-primary {
+    color: #fff;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
+    border-color: rgba(147, 197, 253, .45);
+    box-shadow:
+        0 12px 24px rgba(29, 78, 216, .35),
+        inset 0 1px 0 rgba(255,255,255,.20);
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-3px);
+    filter: brightness(1.08);
+    box-shadow:
+        0 17px 30px rgba(29, 78, 216, .45),
+        0 0 0 4px rgba(59,130,246,.14);
+}
+
+.btn-primary:hover:not(:disabled) i {
+    transform: translateX(2px) scale(1.06);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0) scale(.98);
+    box-shadow: 0 8px 16px rgba(29,78,216,.32);
+}
+
+.btn-primary:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Make the button feel like a mobile app button */
+@media (max-width: 640px) {
+    .welcome-actions {
+        width: 100%;
+        padding: 0 2px;
+    }
+
+    .welcome-actions .btn {
+        width: 100%;
+        min-height: 54px;
+        padding: 15px 20px;
+        border-radius: 15px;
+        font-size: 15px;
+    }
+
+    .welcome-actions .btn i {
+        font-size: 17px;
+    }
+}
+
+@media (max-width: 380px) {
+    .welcome-actions .btn {
+        min-height: 52px;
+        font-size: 14px;
+    }
+}
+
+
+        /* ============================================================
+           CAMPUSLINK DARK HEADER — based on the supplied reference design
+           ============================================================ */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background:
+                linear-gradient(135deg,
+                    transparent 0 4%,
+                    rgba(30, 98, 220, .95) 4% 6%,
+                    rgba(245, 185, 35, .98) 6% 7.5%,
+                    rgba(120, 12, 35, .95) 7.5% 10%,
+                    transparent 10% 90%,
+                    rgba(120, 12, 35, .95) 90% 92.5%,
+                    rgba(245, 185, 35, .98) 92.5% 94%,
+                    rgba(30, 98, 220, .95) 94% 96%,
+                    transparent 96%
+                ),
+                linear-gradient(180deg, #06275f 0%, #031c47 100%);
+            border-bottom: 1px solid rgba(255,255,255,.16);
+            box-shadow: 0 8px 24px rgba(0, 15, 45, .24);
+            overflow: visible;
+        }
+
+        .nav::before,
+        .nav::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 190px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .nav::before {
+            left: 0;
+            background:
+                linear-gradient(35deg,
+                    transparent 0 33%,
+                    rgba(112, 9, 36, .95) 33% 46%,
+                    rgba(246, 190, 34, .98) 46% 52%,
+                    rgba(28, 94, 216, .95) 52% 65%,
+                    transparent 65%);
+        }
+
+        .nav::after {
+            right: 0;
+            transform: scaleX(-1);
+            background:
+                linear-gradient(35deg,
+                    transparent 0 33%,
+                    rgba(112, 9, 36, .95) 33% 46%,
+                    rgba(246, 190, 34, .98) 46% 52%,
+                    rgba(28, 94, 216, .95) 52% 65%,
+                    transparent 65%);
+        }
+
+        .nav-inner {
+            position: relative;
+            z-index: 2;
+            min-height: 100px;
+            padding: 12px 0;
+        }
+
+        .logo {
+            gap: 14px;
+        }
+
+        .logo-mark {
+            width: 76px;
+            height: 76px;
+        }
+
+        .logo-divider {
+            display: none;
+        }
+
+        .logo-text b {
+            color: #fff;
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .logo-text .school-name {
+            display: none;
+        }
+
+        .page-label {
+            color: #c9d8ff;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 10px;
+            background: rgba(3, 20, 52, .35);
+        }
+
+        .nav-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(255,255,255,.7);
+            color: #0f172a;
+            box-shadow: 0 8px 18px rgba(0,0,0,.15);
+        }
+
+        .nav-toggle:hover {
+            background: #fff;
+            color: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .nav-dropdown {
+            top: calc(100% + 10px);
+            z-index: 1000;
+        }
+
+        @media (max-width: 820px) {
+            .nav-inner {
+                min-height: 76px;
+            }
+            .logo-mark {
+                width: 56px;
+                height: 56px;
+            }
+            .logo-text b {
+                color: #fff;
+                font-size: 18px;
+            }
+            .nav::before,
+            .nav::after {
+                width: 110px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .nav-inner {
+                min-height: 66px;
+                padding: 8px 0;
+            }
+            .logo-mark {
+                width: 46px;
+                height: 46px;
+            }
+            .logo-text b {
+                font-size: 16px;
+            }
+            .nav-toggle {
+                width: 42px;
+                height: 42px;
+            }
+            .nav::before,
+            .nav::after {
+                width: 72px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .logo-mark {
+                width: 40px;
+                height: 40px;
+            }
+            .logo-text b {
+                font-size: 14px;
+            }
+            .nav::before,
+            .nav::after {
+                width: 55px;
+            }
+        }
+
+
+        /* FINAL CAMPUSLINK HEADER */
+        .nav {
+            background: linear-gradient(180deg, #06275f 0%, #031a43 100%);
+            border-bottom: 1px solid rgba(255,255,255,.14);
+            box-shadow: 0 8px 24px rgba(0, 15, 45, .28);
+            /* Keep the dropdown visible outside the header */
+            overflow: visible;
+        }
+        .nav::before, .nav::after {
+            content: "";
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 210px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .nav::before {
+            left: 0;
+            background: linear-gradient(35deg,
+                transparent 0 35%,
+                #8b1232 35% 47%,
+                #f1bd2f 47% 53%,
+                #174fc1 53% 66%,
+                transparent 66%);
+        }
+        .nav::after {
+            right: 0;
+            transform: scaleX(-1);
+            background: linear-gradient(35deg,
+                transparent 0 35%,
+                #8b1232 35% 47%,
+                #f1bd2f 47% 53%,
+                #174fc1 53% 66%,
+                transparent 66%);
+        }
+        .nav-inner { position: relative; z-index: 2; min-height: 100px; padding: 10px 0; }
+        .logo { gap: 14px; align-items: center; }
+        .logo-mark { width: 108px; height: 76px; flex-shrink: 0; }
+        .logo-mark img { width: 100%; height: 100%; object-fit: contain; }
+        .logo-divider {
+            display: block;
+            width: 1px;
+            height: 48px;
+            background: rgba(255,255,255,.42);
+            flex-shrink: 0;
+        }
+        .campus-link-title {
+            display: block;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: .02em;
+            white-space: nowrap;
+            text-transform: uppercase;
+            text-shadow: 0 2px 8px rgba(0,0,0,.2);
+        }
+        .logo-text { display: none !important; }
+        .page-label {
+            color: #dce7ff;
+            border: 0;
+            background: transparent;
+            font-size: 13px;
+            letter-spacing: .12em;
+            padding: 8px 14px;
+        }
+        .nav-toggle {
+            width: 48px; height: 48px; border-radius: 12px;
+            background: rgba(255,255,255,.96);
+            border: 1px solid rgba(255,255,255,.7);
+            color: #0f172a;
+            box-shadow: 0 8px 18px rgba(0,0,0,.15);
+        }
+        .nav-toggle:hover { background:#fff; color:#174fc1; }
+        /* Dropdown must sit above the header decorations and page content */
+        .nav { overflow: visible !important; }
+        .nav-dropdown { z-index: 1000 !important; }
+        @media (max-width: 640px) {
+            .nav-inner { min-height: 68px; padding: 8px 0; }
+            .logo { gap: 9px; }
+            .logo-mark { width: 78px; height: 54px; }
+            .logo-divider { height: 34px; }
+            .campus-link-title { font-size: 16px; letter-spacing: .01em; }
+            .page-label { display: none; }
+            .nav-toggle { width: 44px; height: 44px; }
+            .nav::before, .nav::after { width: 100px; }
+        }
+        @media (max-width: 480px) {
+            .campus-link-title { font-size: 14px; }
+            .logo-mark { width: 70px; height: 48px; }
+        }
+        @media (max-width: 380px) {
+            .logo { gap: 7px; }
+            .logo-mark { width: 62px; height: 44px; }
+            .logo-divider { height: 30px; }
+            .campus-link-title { font-size: 12px; }
+        }
+
+        /* FINAL REQUEST: remove the outer/content cards and use the page body directly */
+        main.container {
+            width: 100%;
+            max-width: none;
+            padding: 0 24px;
+        }
+
+        .panel,
+        .welcome-card,
+        .welcome-card.is-closed {
+            width: 100%;
+            max-width: none;
+            min-height: 0;
+            margin: 0;
+            padding: 42px 20px;
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+        }
+
+        .welcome-card h2,
+        .welcome-card p,
+        .welcome-card strong,
+        .welcome-card,
+        .welcome-card .account-box,
+        .section-picker label {
+            color: #fff !important;
+        }
+
+        .welcome-card p {
+            max-width: 680px;
+        }
+
+        .welcome-card .account-box {
+            display: inline-flex;
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            padding: 10px 12px;
+        }
+
+        .section-picker select {
+            color: #fff !important;
+            background-color: rgba(3, 26, 67, .78) !important;
+            border-color: rgba(255,255,255,.55);
+        }
+
+        .section-picker select option {
+            color: #fff;
+            background: #06275f;
+        }
+
+        .welcome-card .welcome-icon {
+            background: rgba(255,255,255,.96);
+        }
+
+        .welcome-card .welcome-icon i {
+            color: #1d4ed8 !important;
+        }
+
+        /* White typography across the page; keep the dropdown legible on its dark surface */
+        body,
+        main,
+        main h1,
+        main h2,
+        main h3,
+        main p,
+        main span,
+        main label,
+        main strong,
+        main b,
+        main i {
+            color: #fff;
+        }
+
+        .nav-dropdown,
+        .nav-dropdown-head,
+        .nav-dropdown a,
+        .nav-dropdown button,
+        .nav-dropdown .nav-empty-note,
+        .nav-dropdown .nav-empty-note span {
+            color: #fff;
+        }
+
+        .nav-dropdown {
+            background: #06275f;
+            border-color: rgba(255,255,255,.18);
+        }
+
+        .nav-dropdown-head {
+            border-bottom-color: rgba(255,255,255,.18);
+        }
+
+        .nav-dropdown a:hover,
+        .nav-dropdown button:hover {
+            background: rgba(255,255,255,.12);
+            color: #fff;
+        }
+
+        .nav-dropdown a i,
+        .nav-dropdown button i,
+        .nav-dropdown .nav-empty-note i {
+            color: #fff;
+        }
+
+        .nav-empty-note {
+            background: rgba(255,255,255,.08);
+            border-color: rgba(255,255,255,.3);
+        }
+
+        @media (max-width: 640px) {
+            main.container { padding: 0 16px; }
+            .panel,
+            .welcome-card,
+            .welcome-card.is-closed {
+                padding: 32px 8px;
+                margin: 0;
+            }
+        }
+
     </style>
 </head>
 
@@ -695,14 +1309,11 @@ unset($_SESSION['flash']['just_enrolled']);
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/logo.png"
-                        alt="Eguia National High School logo" onerror="this.style.display='none'">
+                    <img src="../Images/campuslink-logo.png"
+                        alt="CampusLink Logo" onerror="this.style.display='none'">
                 </div>
-                <div class="logo-divider" aria-hidden="true"></div>
-                <div class="logo-text">
-                    <b>CampusLink</b>
-                    <span class="school-name">Eguia National High School</span>
-                </div>
+                <span class="logo-divider" aria-hidden="true"></span>
+                <span class="campus-link-title">CAMPUS LINK</span>
             </a>
 
             <div class="nav-right">
