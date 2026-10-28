@@ -125,7 +125,7 @@ if ($userType === 'student') {
     $enrollmentStatus = strtolower(trim((string) ($foundUser['enrollment_status'] ?? 'not enrolled')));
     $studentType = strtoupper(trim((string) ($foundUser['student_type'] ?? '')));
 
-    if ($enrollmentStatus === 'Not Enrolled') {
+    if ($enrollmentStatus === 'Enrolled') {
         $redirect = 'student/academic-information.php';
     } else {
         $redirect = 'student/student-enrollment.php';
