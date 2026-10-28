@@ -627,10 +627,25 @@ try {
             border-radius: 10px 10px 0 0;
         }
 
+        /* Register Modal — 5px radius only */
         #registerModal .modal-card {
+            border-radius: 5px;
             max-height: none;
             overflow-y: visible;
             margin: 20px 0;
+        }
+
+        #registerModal .modal-head {
+            border-radius: 5px 5px 0 0;
+        }
+
+        /* Success Modal — 6px radius only */
+        #successModal .modal-card {
+            border-radius: 6px;
+        }
+
+        #successModal .modal-head {
+            border-radius: 6px 6px 0 0;
         }
 
         .modal-head {
@@ -2103,6 +2118,24 @@ try {
                 border-radius: 10px 10px 0 0;
             }
 
+            /* Register Modal — 5px radius only (mobile) */
+            #registerModal .modal-card {
+                border-radius: 5px;
+            }
+
+            #registerModal .modal-head {
+                border-radius: 5px 5px 0 0;
+            }
+
+            /* Success Modal — 6px radius only (mobile) */
+            #successModal .modal-card {
+                border-radius: 6px;
+            }
+
+            #successModal .modal-head {
+                border-radius: 6px 6px 0 0;
+            }
+
             .modal-head {
                 padding: 22px 20px 18px;
                 border-radius: 18px 18px 0 0;
@@ -2629,18 +2662,16 @@ try {
             <div class="modal-body">
                 <div class="modal-alert" id="loginAlert"></div>
 
-                <!-- Added autocomplete="off" to prevent save password prompts -->
                 <form id="loginForm" novalidate autocomplete="off">
                     <div class="form-group">
                         <label for="loginAccount">Account Number <span class="req">*</span></label>
-                        <input type="text" id="loginAccount" name="account_number" placeholder="ACC-1001"
+                        <input type="text" id="loginAccount" name="account_number" placeholder=""
                             autocomplete="off" required>
                         <div class="err-msg" id="loginAccountErr">Ilagay ang account number.</div>
                     </div>
 
                     <div class="form-group">
                         <label for="loginPin">6-Digit PIN <span class="req">*</span></label>
-                        <!-- Changed to autocomplete="new-password" so Chrome doesn't prompt to save it -->
                         <input type="password" id="loginPin" name="pin" class="pin-input" placeholder="••••••"
                             inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="new-password" required>
                         <div class="err-msg" id="loginPinErr">Dapat eksaktong 6 digit ang PIN.</div>
@@ -2869,8 +2900,8 @@ try {
 
                     <div class="form-group">
                         <label for="pin">Magsumite ng anim na numero <span class="req">*</span></label>
-                        <input type="text" id="pin" name="pin" class="pin-input" placeholder="••••••"
-                            inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="off" required>
+                        <input type="password" id="pin" name="pin" class="pin-input" placeholder="••••••"
+                            inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="new-password" required>
                         <div class="err-msg" id="pinErr">Dapat eksaktong 6 digit ang PIN.</div>
                     </div>
 
@@ -3272,7 +3303,7 @@ try {
         const loginAccountErr = document.getElementById('loginAccountErr');
         const loginPinErr = document.getElementById('loginPinErr');
 
-        function openLoginModal() {
+        function openLoginModal(prefillAccount) {
             loginForm.reset();
             loginClearErrors();
             loginAlert.className = 'modal-alert';
@@ -3282,7 +3313,13 @@ try {
 
             loginModal.classList.add('show');
             document.body.style.overflow = 'hidden';
-            setTimeout(() => loginAccountInput.focus(), 250);
+
+            if (prefillAccount) {
+                loginAccountInput.value = prefillAccount;
+                setTimeout(() => loginPinInput.focus(), 250);
+            } else {
+                setTimeout(() => loginAccountInput.focus(), 250);
+            }
         }
 
         function closeLoginModal() {
@@ -3295,7 +3332,7 @@ try {
             [loginAccountErr, loginPinErr].forEach(e => e.classList.remove('show'));
         }
 
-        loginOpenBtn.addEventListener('click', openLoginModal);
+        loginOpenBtn.addEventListener('click', () => openLoginModal());
         if (mobileLoginBtn) {
             mobileLoginBtn.addEventListener('click', () => {
                 mobileMenu.classList.remove('open');
@@ -3567,9 +3604,10 @@ try {
 
         registerModalClose.addEventListener('click', closeRegisterModal);
         registerCancelBtn.addEventListener('click', closeRegisterModal);
-        registerModal.addEventListener('click', (e) => {
-            if (e.target === registerModal) closeRegisterModal();
-        });
+
+        // NOTE: Outside-click close for register modal removed intentionally.
+        // Only the X button and "Kanselahin" button close it.
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && registerModal.classList.contains('show')) closeRegisterModal();
         });
@@ -3656,7 +3694,17 @@ try {
                 const data = await res.json();
 
                 if (data.success) {
-                    if (data.account_number) {
+                    // Read the cookie we just set from PHP
+                    const tempAcc = document.cookie.split('; ').find(row => row.startsWith('temp_account_number='));
+                    
+                    if (tempAcc) {
+                        const accValue = tempAcc.split('=')[1];
+                        loginAccountInput.value = accValue; // Autofill
+                        
+                        // Delete the cookie immediately so it doesn't linger
+                        document.cookie = "temp_account_number=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    } else if (data.account_number) {
+                        // Fallback just in case the cookie failed
                         loginAccountInput.value = data.account_number;
                     }
 
@@ -3669,7 +3717,7 @@ try {
                     if (data.account_number) {
                         openSuccessModal(data.account_number);
                     } else {
-                        openLoginModal();
+                        openLoginModal(loginAccountInput.value);
                     }
                 } else {
                     registerAlert.className = 'modal-alert error show';
@@ -3693,8 +3741,10 @@ try {
 
         function openSuccessModal(accountNumber) {
             successAccountNumber.textContent = accountNumber;
+            successAccountNumber.dataset.fullValue = accountNumber;
             successAccountNumber.classList.remove('copied');
             saveAccountBtn.innerHTML = '<i class="fas fa-copy"></i> Itabi';
+            saveAccountBtn.disabled = false;
             successModal.classList.add('show');
             document.body.style.overflow = 'hidden';
         }
@@ -3705,7 +3755,7 @@ try {
         }
 
         async function copyAccountNumber() {
-            const value = successAccountNumber.textContent.trim();
+            const value = (successAccountNumber.dataset.fullValue || successAccountNumber.textContent).trim();
             try {
                 await navigator.clipboard.writeText(value);
             } catch (err) {
@@ -3726,15 +3776,55 @@ try {
             }, 2200);
         }
 
-        saveAccountBtn.addEventListener('click', copyAccountNumber);
+        // "Itabi" now: copies the account number, closes success modal,
+        // opens the login modal, and auto-fills the account number.
+        async function saveAndGoToLogin() {
+            const value = (successAccountNumber.dataset.fullValue || successAccountNumber.textContent).trim();
+
+            // 1) Copy to clipboard
+            try {
+                await navigator.clipboard.writeText(value);
+            } catch (err) {
+                const tmp = document.createElement('textarea');
+                tmp.value = value;
+                tmp.style.position = 'fixed';
+                tmp.style.opacity = '0';
+                document.body.appendChild(tmp);
+                tmp.select();
+                try { document.execCommand('copy'); } catch (_) { }
+                document.body.removeChild(tmp);
+            }
+
+            // Visual feedback
+            saveAccountBtn.innerHTML = '<i class="fas fa-check"></i> Naitabi!';
+            successAccountNumber.classList.add('copied');
+
+            // 2) Close success modal & open login modal with account prefilled
+            setTimeout(() => {
+                closeSuccessModal();
+                // Reset visual feedback for the next time the success modal is opened
+                saveAccountBtn.innerHTML = '<i class="fas fa-copy"></i> Itabi';
+                saveAccountBtn.disabled = false;
+                successAccountNumber.classList.remove('copied');
+
+                // 3) Open login modal — prefill account number, focus PIN field
+                openLoginModal(value);
+            }, 700);
+        }
+
+        saveAccountBtn.addEventListener('click', saveAndGoToLogin);
+
+        // Clicking the account number itself still copies only
         successAccountNumber.addEventListener('click', copyAccountNumber);
 
-        successModal.addEventListener('click', (e) => {
-            if (e.target === successModal) closeSuccessModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && successModal.classList.contains('show')) closeSuccessModal();
-        });
+        // Success modal closes only via save button (no outside click / escape) — optional
+        // If you want outside-click to close success modal too, uncomment below:
+        // successModal.addEventListener('click', (e) => {
+        //     if (e.target === successModal) closeSuccessModal();
+        // });
+        // document.addEventListener('keydown', (e) => {
+        //     if (e.key === 'Escape' && successModal.classList.contains('show')) closeSuccessModal();
+        // });
 
         /* DIRECTORY */
         const schoolGrid = document.getElementById('schoolGrid');

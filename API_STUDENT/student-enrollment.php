@@ -58,7 +58,7 @@ function flash(string $key, string $msg): void
 
 function redirectHome(): void
 {
-    header('Location: ../student/academic-information.php');
+    header('Location: ../student/student-enrollment.php');
     exit;
 }
 

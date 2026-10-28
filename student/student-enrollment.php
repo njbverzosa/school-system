@@ -37,7 +37,7 @@ function currentAcademicYear(): string
 $currentYear = currentAcademicYear();
 
 /* ------------------------------------------------------------
-   SECTION OPTIONS (hardcoded)
+   SECTION OPTIONS
    ------------------------------------------------------------ */
 $sectionOptions = [
     'Ilang-Ilang', 'Dahlia', 'Rosal', 'Sampaguita',
@@ -106,32 +106,35 @@ if ($user) {
 
 /* ------------------------------------------------------------
    ENROLLMENT STATUS & ACADEMIC STATUS CHECK
-   enrollment_access: 1 = open for old students, 0 = closed
    ------------------------------------------------------------ */
 $enrollmentStatus = $user ? strtolower(trim((string) ($user['enrollment_status'] ?? 'not enrolled'))) : 'not enrolled';
 $studentType = $user ? strtoupper(trim((string) ($user['student_type'] ?? ''))) : '';
 
 $enrollmentAccess = $user ? (int) ($user['enrollment_access'] ?? 0) : 0;
 
-/* "Enrolled" means the student already has an enrollment record this year */
-$enrolledThisYear = ($enrollmentStatus === 'enrolled');
+$isPending  = ($enrollmentStatus === 'pending');
+$isEnrolled = ($enrollmentStatus === 'enrolled');
+$canEnroll  = (!$isPending && !$isEnrolled && $enrollmentAccess === 1);
+$isClosed   = (!$isPending && !$isEnrolled && $enrollmentAccess === 0);
 
-/* "Not Enrolled" covers everything else */
-$isNotEnrolled = !$enrolledThisYear;
-
-/* Toggle state (only relevant to Old Students) */
-$isOpen = ($enrollmentAccess === 1);
+/* ------------------------------------------------------------
+   GUARD: If the student is already fully enrolled, redirect
+   them to academic-information.php — this page is only for
+   students who still have to enroll, are pending, or are closed.
+   ------------------------------------------------------------ */
+if ($isLoggedIn && $user && $isEnrolled) {
+    header('Location: academic-information.php');
+    exit;
+}
 
 $isTransferee = ($studentType === 'T');
 $isNewStudent = ($studentType === 'N');
-$isOldStudent = ($studentType === 'O');
+$isOldStudent  = ($studentType === 'O');
 
 /* ------------------------------------------------------------
    RESOLVE THE STUDENT'S GRADE FOR THE SECTION PICKER
    ------------------------------------------------------------ */
 $userGrade = trim((string) ($user['grade_level'] ?? ''));
-
-/* Sections available to this student (filtered by grade) */
 $sectionsForGrade = $sectionOptionsByGrade[$userGrade] ?? $sectionOptions;
 
 /* ------------------------------------------------------------
@@ -269,7 +272,6 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         .logo-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
-
 
         .logo-divider {
             width: 1px;
@@ -412,7 +414,6 @@ unset($_SESSION['flash']['just_enrolled']);
             color: var(--primary);
         }
 
-        /* Empty note when student is not enrolled */
         .nav-empty-note {
             display: flex;
             align-items: flex-start;
@@ -468,6 +469,16 @@ unset($_SESSION['flash']['just_enrolled']);
             border-color: var(--line);
         }
 
+        .welcome-card.is-transferee {
+            background: linear-gradient(135deg, rgba(254, 243, 199, .92), rgba(253, 230, 138, .78));
+            border-color: rgba(245, 158, 11, .55);
+        }
+
+        .welcome-card.is-new {
+            background: linear-gradient(135deg, rgba(220, 252, 231, .92), rgba(187, 247, 208, .88));
+            border-color: rgba(16, 185, 129, .55);
+        }
+
         .welcome-card .welcome-icon {
             width: 76px;
             height: 76px;
@@ -486,6 +497,16 @@ unset($_SESSION['flash']['just_enrolled']);
             box-shadow: 0 12px 26px -14px rgba(100, 116, 139, .45);
         }
 
+        .welcome-card.is-transferee .welcome-icon {
+            color: #b45309;
+            box-shadow: 0 12px 26px -14px rgba(245, 158, 11, .55);
+        }
+
+        .welcome-card.is-new .welcome-icon {
+            color: #047857;
+            box-shadow: 0 12px 26px -14px rgba(16, 185, 129, .55);
+        }
+
         .welcome-card h2 {
             font-size: 24px;
             font-weight: 800;
@@ -497,7 +518,7 @@ unset($_SESSION['flash']['just_enrolled']);
         .welcome-card p {
             font-size: 15px;
             color: #334155;
-            max-width: 560px;
+            max-width: 620px;
             margin: 0 auto 20px;
             line-height: 1.7;
         }
@@ -724,11 +745,9 @@ unset($_SESSION['flash']['just_enrolled']);
             .logo-text b { font-size: 14px; max-width: 130px; }
             .logo-text .school-name { font-size: 9px; max-width: 130px; }
         }
-    
+
 /* RESPONSIVE SCHOOL HALLWAY BACKGROUND */
-html, body {
-    min-height: 100%;
-}
+html, body { min-height: 100%; }
 
 body {
     position: relative;
@@ -756,8 +775,6 @@ body::before {
     pointer-events: none;
 }
 
-/* Phones: fixed backgrounds can behave poorly on iOS/Android browsers.
-   Keep the image covering the viewport and center its important area. */
 @media (max-width: 768px) {
     body {
         background-attachment: scroll;
@@ -765,29 +782,17 @@ body::before {
         background-position: center center;
         min-height: 100svh;
     }
-
-    body::before {
-        position: absolute;
-        min-height: 100%;
-    }
+    body::before { position: absolute; min-height: 100%; }
 }
 
-/* Very narrow/tall phones */
 @media (max-width: 430px) {
-    body {
-        background-position: 50% center;
-        background-size: cover;
-    }
+    body { background-position: 50% center; background-size: cover; }
 }
 
-/* Short landscape phones */
 @media (max-height: 500px) and (orientation: landscape) {
-    body {
-        background-position: center 42%;
-    }
+    body { background-position: center 42%; }
 }
 
-    
 /* MODERN RESPONSIVE BUTTONS */
 .btn {
     position: relative;
@@ -820,24 +825,13 @@ body::before {
     left: -110%;
     width: 65%;
     height: 100%;
-    background: linear-gradient(
-        100deg,
-        transparent,
-        rgba(255,255,255,.35),
-        transparent
-    );
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
     transform: skewX(-18deg);
     transition: left .55s ease;
 }
 
-.btn:hover::before {
-    left: 140%;
-}
-
-.btn i {
-    font-size: 16px;
-    transition: transform .2s ease;
-}
+.btn:hover::before { left: 140%; }
+.btn i { font-size: 16px; transition: transform .2s ease; }
 
 .btn-primary {
     color: #fff;
@@ -856,9 +850,7 @@ body::before {
         0 0 0 4px rgba(59,130,246,.14);
 }
 
-.btn-primary:hover:not(:disabled) i {
-    transform: translateX(2px) scale(1.06);
-}
+.btn-primary:hover:not(:disabled) i { transform: translateX(2px) scale(1.06); }
 
 .btn-primary:active:not(:disabled) {
     transform: translateY(0) scale(.98);
@@ -871,13 +863,8 @@ body::before {
     transform: none;
 }
 
-/* Make the button feel like a mobile app button */
 @media (max-width: 640px) {
-    .welcome-actions {
-        width: 100%;
-        padding: 0 2px;
-    }
-
+    .welcome-actions { width: 100%; padding: 0 2px; }
     .welcome-actions .btn {
         width: 100%;
         min-height: 54px;
@@ -885,413 +872,305 @@ body::before {
         border-radius: 15px;
         font-size: 15px;
     }
-
-    .welcome-actions .btn i {
-        font-size: 17px;
-    }
+    .welcome-actions .btn i { font-size: 17px; }
 }
 
 @media (max-width: 380px) {
-    .welcome-actions .btn {
-        min-height: 52px;
-        font-size: 14px;
-    }
+    .welcome-actions .btn { min-height: 52px; font-size: 14px; }
 }
 
+/* CAMPUSLINK DARK HEADER */
+.nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(180deg, #06275f 0%, #031a43 100%);
+    border-bottom: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 8px 24px rgba(0, 15, 45, .28);
+    overflow: visible;
+}
 
-        /* ============================================================
-           CAMPUSLINK DARK HEADER — based on the supplied reference design
-           ============================================================ */
-        .nav {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background:
-                linear-gradient(135deg,
-                    transparent 0 4%,
-                    rgba(30, 98, 220, .95) 4% 6%,
-                    rgba(245, 185, 35, .98) 6% 7.5%,
-                    rgba(120, 12, 35, .95) 7.5% 10%,
-                    transparent 10% 90%,
-                    rgba(120, 12, 35, .95) 90% 92.5%,
-                    rgba(245, 185, 35, .98) 92.5% 94%,
-                    rgba(30, 98, 220, .95) 94% 96%,
-                    transparent 96%
-                ),
-                linear-gradient(180deg, #06275f 0%, #031c47 100%);
-            border-bottom: 1px solid rgba(255,255,255,.16);
-            box-shadow: 0 8px 24px rgba(0, 15, 45, .24);
-            overflow: visible;
-        }
+.nav::before, .nav::after {
+    content: "";
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 210px;
+    pointer-events: none;
+    z-index: 0;
+}
 
-        .nav::before,
-        .nav::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 190px;
-            pointer-events: none;
-            z-index: 0;
-        }
+.nav::before {
+    left: 0;
+    background: linear-gradient(35deg,
+        transparent 0 35%,
+        #8b1232 35% 47%,
+        #f1bd2f 47% 53%,
+        #174fc1 53% 66%,
+        transparent 66%);
+}
 
-        .nav::before {
-            left: 0;
-            background:
-                linear-gradient(35deg,
-                    transparent 0 33%,
-                    rgba(112, 9, 36, .95) 33% 46%,
-                    rgba(246, 190, 34, .98) 46% 52%,
-                    rgba(28, 94, 216, .95) 52% 65%,
-                    transparent 65%);
-        }
+.nav::after {
+    right: 0;
+    transform: scaleX(-1);
+    background: linear-gradient(35deg,
+        transparent 0 35%,
+        #8b1232 35% 47%,
+        #f1bd2f 47% 53%,
+        #174fc1 53% 66%,
+        transparent 66%);
+}
 
-        .nav::after {
-            right: 0;
-            transform: scaleX(-1);
-            background:
-                linear-gradient(35deg,
-                    transparent 0 33%,
-                    rgba(112, 9, 36, .95) 33% 46%,
-                    rgba(246, 190, 34, .98) 46% 52%,
-                    rgba(28, 94, 216, .95) 52% 65%,
-                    transparent 65%);
-        }
+.nav-inner { position: relative; z-index: 2; min-height: 100px; padding: 10px 0; }
+.logo { gap: 14px; align-items: center; }
+.logo-mark { width: 108px; height: 76px; flex-shrink: 0; }
+.logo-mark img { width: 100%; height: 100%; object-fit: contain; }
+.logo-divider {
+    display: block;
+    width: 1px;
+    height: 48px;
+    background: rgba(255,255,255,.42);
+    flex-shrink: 0;
+}
+.campus-link-title {
+    display: block;
+    color: #fff;
+    font-family: 'Poppins', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: .02em;
+    white-space: nowrap;
+    text-transform: uppercase;
+    text-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.logo-text { display: none !important; }
+.page-label {
+    color: #dce7ff;
+    border: 0;
+    background: transparent;
+    font-size: 13px;
+    letter-spacing: .12em;
+    padding: 8px 14px;
+}
+.nav-toggle {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: rgba(255,255,255,.96);
+    border: 1px solid rgba(255,255,255,.7);
+    color: #0f172a;
+    box-shadow: 0 8px 18px rgba(0,0,0,.15);
+}
+.nav-toggle:hover { background:#fff; color:#174fc1; }
+.nav { overflow: visible !important; }
+.nav-dropdown { z-index: 1000 !important; }
 
-        .nav-inner {
-            position: relative;
-            z-index: 2;
-            min-height: 100px;
-            padding: 12px 0;
-        }
+@media (max-width: 640px) {
+    .nav-inner { min-height: 68px; padding: 8px 0; }
+    .logo { gap: 9px; }
+    .logo-mark { width: 78px; height: 54px; }
+    .logo-divider { height: 34px; }
+    .campus-link-title { font-size: 16px; letter-spacing: .01em; }
+    .page-label { display: none; }
+    .nav-toggle { width: 44px; height: 44px; }
+    .nav::before, .nav::after { width: 100px; }
+}
 
-        .logo {
-            gap: 14px;
-        }
+@media (max-width: 480px) {
+    .campus-link-title { font-size: 14px; }
+    .logo-mark { width: 70px; height: 48px; }
+}
 
-        .logo-mark {
-            width: 76px;
-            height: 76px;
-        }
+@media (max-width: 380px) {
+    .logo { gap: 7px; }
+    .logo-mark { width: 62px; height: 44px; }
+    .logo-divider { height: 30px; }
+    .campus-link-title { font-size: 12px; }
+}
 
-        .logo-divider {
-            display: none;
-        }
+/* FINAL REQUEST: remove the outer/content cards */
+main.container {
+    width: 100%;
+    max-width: none;
+    padding: 0 24px;
+}
 
-        .logo-text b {
-            color: #fff;
-            font-size: 21px;
-            font-weight: 800;
-        }
+.panel,
+.welcome-card,
+.welcome-card.is-closed,
+.welcome-card.is-transferee,
+.welcome-card.is-new {
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    padding: 42px 20px;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
 
-        .logo-text .school-name {
-            display: none;
-        }
+.welcome-card h2,
+.welcome-card p,
+.welcome-card strong,
+.welcome-card,
+.welcome-card .account-box,
+.section-picker label {
+    color: #fff !important;
+}
 
-        .page-label {
-            color: #c9d8ff;
-            border: 1px solid rgba(255,255,255,.14);
-            border-radius: 10px;
-            background: rgba(3, 20, 52, .35);
-        }
+.welcome-card p {
+    max-width: 680px;
+}
 
-        .nav-toggle {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: rgba(255,255,255,.96);
-            border: 1px solid rgba(255,255,255,.7);
-            color: #0f172a;
-            box-shadow: 0 8px 18px rgba(0,0,0,.15);
-        }
+.welcome-card .account-box {
+    display: inline-flex;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 10px 12px;
+}
 
-        .nav-toggle:hover {
-            background: #fff;
-            color: #1d4ed8;
-            transform: translateY(-1px);
-        }
+.section-picker select {
+    color: #fff !important;
+    background-color: rgba(3, 26, 67, .78) !important;
+    border-color: rgba(255,255,255,.55);
+}
 
-        .nav-dropdown {
-            top: calc(100% + 10px);
-            z-index: 1000;
-        }
+.section-picker select option {
+    color: #fff;
+    background: #06275f;
+}
 
-        @media (max-width: 820px) {
-            .nav-inner {
-                min-height: 76px;
-            }
-            .logo-mark {
-                width: 56px;
-                height: 56px;
-            }
-            .logo-text b {
-                color: #fff;
-                font-size: 18px;
-            }
-            .nav::before,
-            .nav::after {
-                width: 110px;
-            }
-        }
+.welcome-card .welcome-icon {
+    background: rgba(255,255,255,.96);
+}
 
-        @media (max-width: 640px) {
-            .nav-inner {
-                min-height: 66px;
-                padding: 8px 0;
-            }
-            .logo-mark {
-                width: 46px;
-                height: 46px;
-            }
-            .logo-text b {
-                font-size: 16px;
-            }
-            .nav-toggle {
-                width: 42px;
-                height: 42px;
-            }
-            .nav::before,
-            .nav::after {
-                width: 72px;
-            }
-        }
+.welcome-card .welcome-icon i {
+    color: #1d4ed8 !important;
+}
 
-        @media (max-width: 400px) {
-            .logo-mark {
-                width: 40px;
-                height: 40px;
-            }
-            .logo-text b {
-                font-size: 14px;
-            }
-            .nav::before,
-            .nav::after {
-                width: 55px;
-            }
-        }
+/* Registrar notice block (shown after enrollment success) */
+.registrar-notice {
+    max-width: 720px;
+    margin: 22px auto 0;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.30);
+    border-radius: 12px;
+    padding: 20px 22px;
+    color: #fff;
+    font-size: 14.5px;
+    line-height: 1.75;
+}
 
+.registrar-notice h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #fff;
+}
 
-        /* FINAL CAMPUSLINK HEADER */
-        .nav {
-            background: linear-gradient(180deg, #06275f 0%, #031a43 100%);
-            border-bottom: 1px solid rgba(255,255,255,.14);
-            box-shadow: 0 8px 24px rgba(0, 15, 45, .28);
-            /* Keep the dropdown visible outside the header */
-            overflow: visible;
-        }
-        .nav::before, .nav::after {
-            content: "";
-            position: absolute;
-            top: 0; bottom: 0;
-            width: 210px;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .nav::before {
-            left: 0;
-            background: linear-gradient(35deg,
-                transparent 0 35%,
-                #8b1232 35% 47%,
-                #f1bd2f 47% 53%,
-                #174fc1 53% 66%,
-                transparent 66%);
-        }
-        .nav::after {
-            right: 0;
-            transform: scaleX(-1);
-            background: linear-gradient(35deg,
-                transparent 0 35%,
-                #8b1232 35% 47%,
-                #f1bd2f 47% 53%,
-                #174fc1 53% 66%,
-                transparent 66%);
-        }
-        .nav-inner { position: relative; z-index: 2; min-height: 100px; padding: 10px 0; }
-        .logo { gap: 14px; align-items: center; }
-        .logo-mark { width: 108px; height: 76px; flex-shrink: 0; }
-        .logo-mark img { width: 100%; height: 100%; object-fit: contain; }
-        .logo-divider {
-            display: block;
-            width: 1px;
-            height: 48px;
-            background: rgba(255,255,255,.42);
-            flex-shrink: 0;
-        }
-        .campus-link-title {
-            display: block;
-            color: #fff;
-            font-family: 'Poppins', sans-serif;
-            font-size: 24px;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: .02em;
-            white-space: nowrap;
-            text-transform: uppercase;
-            text-shadow: 0 2px 8px rgba(0,0,0,.2);
-        }
-        .logo-text { display: none !important; }
-        .page-label {
-            color: #dce7ff;
-            border: 0;
-            background: transparent;
-            font-size: 13px;
-            letter-spacing: .12em;
-            padding: 8px 14px;
-        }
-        .nav-toggle {
-            width: 48px; height: 48px; border-radius: 12px;
-            background: rgba(255,255,255,.96);
-            border: 1px solid rgba(255,255,255,.7);
-            color: #0f172a;
-            box-shadow: 0 8px 18px rgba(0,0,0,.15);
-        }
-        .nav-toggle:hover { background:#fff; color:#174fc1; }
-        /* Dropdown must sit above the header decorations and page content */
-        .nav { overflow: visible !important; }
-        .nav-dropdown { z-index: 1000 !important; }
-        @media (max-width: 640px) {
-            .nav-inner { min-height: 68px; padding: 8px 0; }
-            .logo { gap: 9px; }
-            .logo-mark { width: 78px; height: 54px; }
-            .logo-divider { height: 34px; }
-            .campus-link-title { font-size: 16px; letter-spacing: .01em; }
-            .page-label { display: none; }
-            .nav-toggle { width: 44px; height: 44px; }
-            .nav::before, .nav::after { width: 100px; }
-        }
-        @media (max-width: 480px) {
-            .campus-link-title { font-size: 14px; }
-            .logo-mark { width: 70px; height: 48px; }
-        }
-        @media (max-width: 380px) {
-            .logo { gap: 7px; }
-            .logo-mark { width: 62px; height: 44px; }
-            .logo-divider { height: 30px; }
-            .campus-link-title { font-size: 12px; }
-        }
+.registrar-notice h3 i {
+    color: #fbbf24;
+    font-size: 18px;
+}
 
-        /* FINAL REQUEST: remove the outer/content cards and use the page body directly */
-        main.container {
-            width: 100%;
-            max-width: none;
-            padding: 0 24px;
-        }
+.registrar-notice ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
 
-        .panel,
-        .welcome-card,
-        .welcome-card.is-closed {
-            width: 100%;
-            max-width: none;
-            min-height: 0;
-            margin: 0;
-            padding: 42px 20px;
-            background: transparent !important;
-            border: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
-            -webkit-backdrop-filter: none !important;
-            backdrop-filter: none !important;
-        }
+.registrar-notice li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+    color: #fff;
+}
 
-        .welcome-card h2,
-        .welcome-card p,
-        .welcome-card strong,
-        .welcome-card,
-        .welcome-card .account-box,
-        .section-picker label {
-            color: #fff !important;
-        }
+.registrar-notice li i {
+    color: #34d399;
+    font-size: 14px;
+    margin-top: 4px;
+    flex-shrink: 0;
+}
 
-        .welcome-card p {
-            max-width: 680px;
-        }
+@media (max-width: 640px) {
+    .registrar-notice {
+        padding: 16px 16px;
+        font-size: 13.5px;
+        line-height: 1.7;
+    }
+    .registrar-notice h3 { font-size: 15px; }
+}
 
-        .welcome-card .account-box {
-            display: inline-flex;
-            background: transparent !important;
-            border: 0 !important;
-            box-shadow: none !important;
-            padding: 10px 12px;
-        }
+/* White typography across the page */
+body,
+main,
+main h1,
+main h2,
+main h3,
+main p,
+main span,
+main label,
+main strong,
+main b,
+main i {
+    color: #fff;
+}
 
-        .section-picker select {
-            color: #fff !important;
-            background-color: rgba(3, 26, 67, .78) !important;
-            border-color: rgba(255,255,255,.55);
-        }
+.nav-dropdown,
+.nav-dropdown-head,
+.nav-dropdown a,
+.nav-dropdown button,
+.nav-dropdown .nav-empty-note,
+.nav-dropdown .nav-empty-note span {
+    color: #fff;
+}
 
-        .section-picker select option {
-            color: #fff;
-            background: #06275f;
-        }
+.nav-dropdown {
+    background: #06275f;
+    border-color: rgba(255,255,255,.18);
+}
 
-        .welcome-card .welcome-icon {
-            background: rgba(255,255,255,.96);
-        }
+.nav-dropdown-head {
+    border-bottom-color: rgba(255,255,255,.18);
+}
 
-        .welcome-card .welcome-icon i {
-            color: #1d4ed8 !important;
-        }
+.nav-dropdown a:hover,
+.nav-dropdown button:hover {
+    background: rgba(255,255,255,.12);
+    color: #fff;
+}
 
-        /* White typography across the page; keep the dropdown legible on its dark surface */
-        body,
-        main,
-        main h1,
-        main h2,
-        main h3,
-        main p,
-        main span,
-        main label,
-        main strong,
-        main b,
-        main i {
-            color: #fff;
-        }
+.nav-dropdown a i,
+.nav-dropdown button i,
+.nav-dropdown .nav-empty-note i {
+    color: #fff;
+}
 
-        .nav-dropdown,
-        .nav-dropdown-head,
-        .nav-dropdown a,
-        .nav-dropdown button,
-        .nav-dropdown .nav-empty-note,
-        .nav-dropdown .nav-empty-note span {
-            color: #fff;
-        }
+.nav-empty-note {
+    background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.3);
+}
 
-        .nav-dropdown {
-            background: #06275f;
-            border-color: rgba(255,255,255,.18);
-        }
-
-        .nav-dropdown-head {
-            border-bottom-color: rgba(255,255,255,.18);
-        }
-
-        .nav-dropdown a:hover,
-        .nav-dropdown button:hover {
-            background: rgba(255,255,255,.12);
-            color: #fff;
-        }
-
-        .nav-dropdown a i,
-        .nav-dropdown button i,
-        .nav-dropdown .nav-empty-note i {
-            color: #fff;
-        }
-
-        .nav-empty-note {
-            background: rgba(255,255,255,.08);
-            border-color: rgba(255,255,255,.3);
-        }
-
-        @media (max-width: 640px) {
-            main.container { padding: 0 16px; }
-            .panel,
-            .welcome-card,
-            .welcome-card.is-closed {
-                padding: 32px 8px;
-                margin: 0;
-            }
-        }
+@media (max-width: 640px) {
+    main.container { padding: 0 16px; }
+    .panel,
+    .welcome-card,
+    .welcome-card.is-closed,
+    .welcome-card.is-transferee,
+    .welcome-card.is-new {
+        padding: 32px 8px;
+        margin: 0;
+    }
+}
 
     </style>
 </head>
@@ -1327,36 +1206,20 @@ body::before {
                     <div class="nav-dropdown" id="navDropdown" role="menu">
                         <div class="nav-dropdown-head">MENU</div>
 
-                        <?php if ($enrolledThisYear): ?>
-                            <!-- Enabled menu links — only when the student is enrolled -->
-                            <a href="academic-information.php" role="menuitem">
-                                <i class="fas fa-calendar-days"></i> Subject Schedule
-                            </a>
-
-                            <a href="my-attendance.php" role="menuitem">
-                                <i class="fas fa-clipboard-user"></i> My Attendance
-                            </a>
-
-                            <a href="student-grades.php" role="menuitem">
-                                <i class="fas fa-chart-line"></i> Grades &amp; Transcripts
-                            </a>
-
-                            <a href="my-profile.php" role="menuitem">
-                                <i class="fas fa-folder-open"></i> Master File
-                            </a>
-                        <?php else: ?>
-                            <!-- Disabled state — student is not yet enrolled -->
-                            <div class="nav-empty-note">
-                                <i class="fas fa-lock"></i>
-                                <span>Menu links are available after enrollment.</span>
-                            </div>
-                        <?php endif; ?>
-
-                        <div style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px;">
-                            <a href="logout.php" role="menuitem" style="color: #b91c1c;">
-                                <i class="fas fa-right-from-bracket" style="color: #b91c1c;"></i> Logout
-                            </a>
-                        </div>
+                        <?php
+                        /*
+                         * On this page the student is either:
+                         *   - pending, or
+                         *   - not enrolled, or
+                         *   - enrollment access = 0 (closed).
+                         * Fully enrolled students are redirected away by the
+                         * guard at the top of this file, so we only ever
+                         * show the Logout link here.
+                         */
+                        ?>
+                        <a href="logout.php" role="menuitem" style="color: #b91c1c;">
+                            <i class="fas fa-right-from-bracket" style="color: #b91c1c;"></i> Logout
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1367,22 +1230,99 @@ body::before {
         <?php if ($isLoggedIn && $user): ?>
             <section class="panel">
 
-                <?php if ($isNotEnrolled && $isOldStudent && $isOpen): ?>
+                <?php if ($isPending): ?>
                     <!-- ============================================================
-                         NOT ENROLLED + OLD STUDENT + ACCESS = 1
-                         → section picker filtered to the student's grade
+                         ENROLLMENT_STATUS = "PENDING"
+                         → Show Registrar instructions (applies to N, O, and T alike)
                          ============================================================ -->
                     <div class="welcome-card">
                         <div class="welcome-icon">
-                            <i class="fas fa-hand-sparkles"></i>
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+
+                        <h2>Enrollment Pending, <?php echo htmlspecialchars($displayName ?: $user['account_number']); ?>!</h2>
+
+                        <p>
+                            Your enrollment for
+                            <strong>S.Y. <?php echo htmlspecialchars($currentYear); ?></strong>
+                            has been submitted and is now waiting for final processing.
+                        </p>
+
+                        <div class="account-box">
+                            <i class="fas fa-id-card"></i>
+                            Account No. <b><?php echo htmlspecialchars($user['account_number']); ?></b>
+                        </div>
+
+                        <div class="account-box" style="margin-left: 8px;">
+                            <i class="fas fa-graduation-cap"></i>
+                            Grade Level: <b><?php echo htmlspecialchars($userGrade !== '' ? $userGrade : '—'); ?></b>
+                        </div>
+
+                        <div class="registrar-notice">
+                            <h3>
+                                <i class="fas fa-triangle-exclamation"></i>
+                                Your Next Step: Visit the Registrar's Office
+                            </h3>
+                            <p style="margin-bottom: 12px;">
+                                Students who have completed online enrollment must still finalize their records
+                                in person. Please proceed to the <strong>Registrar's Office</strong> to complete
+                                the enrollment process.
+                            </p>
+                            <ul>
+                                <li>
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Bring your <strong>required documents</strong> for verification.</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Dress appropriately in a <strong>plain white T-shirt</strong> — this is for your official ID picture.</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-clock"></i>
+                                    <span>The Registrar's Office is open from <strong>8:00 AM to 4:00 PM</strong>, Monday to Friday.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                <?php elseif ($canEnroll): ?>
+                    <!-- ============================================================
+                         ENROLLMENT_ACCESS = 1 (and not pending / not enrolled)
+                         → Show the enrollment card with section picker + button
+                         ============================================================ -->
+                    <div class="welcome-card <?php echo $isTransferee ? 'is-transferee' : ($isNewStudent ? 'is-new' : ''); ?>">
+                        <div class="welcome-icon">
+                            <?php if ($isTransferee): ?>
+                                <i class="fas fa-people-arrows"></i>
+                            <?php elseif ($isNewStudent): ?>
+                                <i class="fas fa-user-plus"></i>
+                            <?php else: ?>
+                                <i class="fas fa-hand-sparkles"></i>
+                            <?php endif; ?>
                         </div>
 
                         <h2>Welcome, <?php echo htmlspecialchars($displayName ?: $user['account_number']); ?>!</h2>
 
                         <p>
-                            Enrollment for <strong>S.Y. <?php echo htmlspecialchars($currentYear); ?></strong>
-                            is now open. Select your section below, then click
-                            <strong>Enroll Now</strong> to proceed.
+                            <?php if ($isTransferee): ?>
+                                As a <strong>transferee</strong>, you are enrolling for
+                                <strong>S.Y. <?php echo htmlspecialchars($currentYear); ?></strong>.
+                                Select your section below and click <strong>Enroll Now</strong>.
+                                After enrolling online, please proceed to the
+                                <strong>Registrar's Office</strong> to submit your transfer credentials.
+                            <?php elseif ($isNewStudent): ?>
+                                Welcome to Eguia National High School! You are enrolling as a
+                                <strong>new student</strong> for
+                                <strong>S.Y. <?php echo htmlspecialchars($currentYear); ?></strong>.
+                                Select your section below and click <strong>Enroll Now</strong>.
+                                After enrolling online, please proceed to the
+                                <strong>Registrar's Office</strong> to submit your requirements.
+                            <?php else: ?>
+                                Enrollment for
+                                <strong>S.Y. <?php echo htmlspecialchars($currentYear); ?></strong>
+                                is now open. Select your section below, then click
+                                <strong>Enroll Now</strong> to proceed.
+                            <?php endif; ?>
                         </p>
 
                         <div class="account-box">
@@ -1414,19 +1354,20 @@ body::before {
                         </div>
                     </div>
 
-                <?php elseif ($isNotEnrolled && $isOldStudent && !$isOpen): ?>
+                <?php elseif ($isClosed): ?>
                     <!-- ============================================================
-                         NOT ENROLLED + OLD STUDENT + ACCESS = 0
-                         → hide the button, show "closed"
+                         ENROLLMENT_ACCESS = 0 (and not pending / not enrolled)
+                         → Show "Enrollment is Currently Closed"
                          ============================================================ -->
                     <div class="welcome-card is-closed">
                         <div class="welcome-icon">
                             <i class="fas fa-clock"></i>
                         </div>
-                        <h2>Enrollment is currently closed</h2>
+                        <h2>Enrollment is Currently Closed</h2>
                         <p>
-                            Enrollment is not available at the moment. Please wait for the school's
-                            official announcement and schedule before trying again.
+                            Online enrollment is not available at the moment. Please wait for the school's
+                            official announcement and schedule before trying again. You may also visit the
+                            <strong>Registrar's Office</strong> for assistance during office hours.
                         </p>
                         <div class="account-box">
                             <i class="fas fa-id-card"></i>
@@ -1434,26 +1375,6 @@ body::before {
                         </div>
                     </div>
 
-                <?php else: ?>
-                    <!-- ============================================================
-                         NOT ENROLLED + NEW STUDENT / TRANSFEREE
-                         → hide the button, show "waiting for approval"
-                         ============================================================ -->
-                    <div class="welcome-card is-closed">
-                        <div class="welcome-icon"
-                            style="color: #b45309; background: #fef3c7; box-shadow: 0 12px 26px -14px rgba(245, 158, 11, 0.45);">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <h2>For New Students and Transferees</h2>
-                        <p>
-                            Please proceed to the <strong>Registrar's Office</strong> to complete your
-                            enrollment. Bring your required documents for verification.
-                        </p>
-                        <div class="account-box">
-                            <i class="fas fa-id-card"></i>
-                            Account No. <b><?php echo htmlspecialchars($user['account_number']); ?></b>
-                        </div>
-                    </div>
                 <?php endif; ?>
             </section>
         <?php endif; ?>

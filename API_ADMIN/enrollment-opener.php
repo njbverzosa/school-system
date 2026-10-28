@@ -89,8 +89,9 @@ $action = trim((string) ($_POST['action'] ?? ''));
 switch ($action) {
 
     /* ============================================================
-       ACTION 1: Toggle enrollment access for Old Students
+       ACTION 1: Toggle enrollment access for students
        enrollment_access: 1 = open, 0 = closed
+       EXCLUDES students whose enrollment_status = 'Enrolled'
        ============================================================ */
     case 'toggle_enrollment': {
         $newStatusRaw = trim((string) ($_POST['new_status'] ?? ''));
@@ -104,18 +105,26 @@ switch ($action) {
         $targetAccess = (int) $newStatusRaw;
 
         try {
-            /* CHANGED: single placeholder — just set enrollment_access on every student row */
+            /*
+             * Only update students who are NOT already fully enrolled.
+             * Students with enrollment_status = 'enrolled' (case-insensitive)
+             * keep whatever enrollment_access value they already have.
+             */
             $stmt = $pdo->prepare("
                 UPDATE students
                 SET enrollment_access = ?
+                WHERE LOWER(TRIM(COALESCE(enrollment_status, ''))) <> 'enrolled'
+                   OR enrollment_status IS NULL
             ");
             $stmt->execute([$targetAccess]);
+
+            $affected = $stmt->rowCount();
 
             setFlash(
                 'success',
                 $targetAccess === 1
-                    ? "Enrollment is now OPEN for All Students."
-                    : "Enrollment is now CLOSED for All Students."
+                    ? "Enrollment is now OPEN for eligible students ({$affected} row(s) updated). Already-enrolled students were not changed."
+                    : "Enrollment is now CLOSED for eligible students ({$affected} row(s) updated). Already-enrolled students were not changed."
             );
         } catch (PDOException $e) {
             error_log("enrollment-settings: toggle_enrollment failed: " . $e->getMessage());

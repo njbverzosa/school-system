@@ -10,8 +10,8 @@ header('Referrer-Policy: no-referrer');
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 0,
-        'path'     => '/',
-        'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        'path' => '/',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -64,8 +64,8 @@ if ($accountNumber === '' || $pinPlain === '') {
 $tables = [
     'student' => 'students',
     'teacher' => 'teachers',
-    'staff'   => 'faculties_staff',
-    'admin'   => 'admins',
+    'staff' => 'faculties_staff',
+    'admin' => 'admins',
 ];
 
 $foundUser = null;
@@ -123,11 +123,14 @@ if (!in_array($userType, $allowedTypes, true)) {
    ------------------------------------------------------------ */
 if ($userType === 'student') {
     $enrollmentStatus = strtolower(trim((string) ($foundUser['enrollment_status'] ?? 'not enrolled')));
-    $studentType = strtoupper(trim((string) ($foundUser['student_type'] ?? '')));
 
-    // Enrolled OR Pending → academic-information.php
-    // Not Enrolled (or anything else) → student-enrollment.php
-    if (in_array($enrollmentStatus, ['enrolled', 'pending'], true)) {
+    /*
+     * Redirect rules for students:
+     *  - enrollment_status = "enrolled" → academic-information.php
+     *  - everything else (pending, not enrolled, empty, unknown)
+     *                                   → student-enrollment.php
+     */
+    if ($enrollmentStatus === 'enrolled') {
         $redirect = 'student/academic-information.php';
     } else {
         $redirect = 'student/student-enrollment.php';

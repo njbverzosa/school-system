@@ -255,6 +255,9 @@ try {
     $stmt->execute($params);
     $pdo->commit();
 
+    // NEW: Set a temporary cookie for the frontend to read and autofill
+    setcookie('temp_account_number', $accountNumber, time() + 60, '/', '', false, true);
+
     echo json_encode([
         'success'        => true,
         'message'        => 'Matagumpay ang pagrehistro!',

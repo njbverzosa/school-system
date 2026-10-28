@@ -371,7 +371,7 @@ if ($action === 'approve_with_capture') {
         /* ---------- UPDATE students ---------- */
         $setParts = [
             "enrollment_status = 'Enrolled'",
-            "student_type = 'O'",
+            "student_type = '1'",
         ];
         $params = [];
 
