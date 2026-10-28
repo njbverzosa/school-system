@@ -607,6 +607,33 @@ $adviserSurnameCache = [];
             word-break: break-all;
         }
 
+        /* =====================================================
+           DEVTOOLS DETECTION OVERLAY
+           Shown ONLY while DevTools is open, hidden when closed.
+           ===================================================== */
+        #devtools-overlay {
+          display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2147483647;
+            background: #000 center/contain no-repeat;
+            background-image: url('../Images/edit.jpg');
+            cursor: not-allowed;
+        }
+
+        #devtools-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #devtools-overlay img {
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain;
+            display: block;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 1024px) {
             .nav-inner {
@@ -783,6 +810,11 @@ $adviserSurnameCache = [];
 </head>
 
 <body>
+    <!-- DEVTOOLS DETECTION OVERLAY (hidden unless DevTools is open) -->
+    <div id="devtools-overlay" aria-hidden="true">
+        <img src="../Images/edit.jpg"/>
+    </div>
+
     <header class="nav" id="nav">
         <div class="container nav-inner">
             <a href="#" class="logo">
@@ -926,6 +958,9 @@ $adviserSurnameCache = [];
     </main>
 
     <script>
+        /* =====================================================
+           NAV DROPDOWN
+           ===================================================== */
         const navToggle = document.getElementById('navToggle');
         const navDropdown = document.getElementById('navDropdown');
 
@@ -941,6 +976,134 @@ $adviserSurnameCache = [];
                 navToggle.setAttribute('aria-expanded', 'false');
             }
         });
+
+        /* =====================================================
+           DEVTOOLS DETECTION — SHOW/HIDE OVERLAY
+           Overlay is shown ONLY while DevTools is open.
+           It is hidden again when DevTools is closed.
+           ===================================================== */
+        (function() {
+            'use strict';
+
+            const overlay = document.getElementById('devtools-overlay');
+            if (!overlay) return;
+
+            let shown = false;
+
+            function setShown(state, reason) {
+                if (state === shown) return;
+                shown = state;
+
+                if (state) {
+                    overlay.classList.add('active');
+                    overlay.setAttribute('aria-hidden', 'false');
+                } else {
+                    overlay.classList.remove('active');
+                    overlay.setAttribute('aria-hidden', 'true');
+                }
+
+                // eslint-disable-next-line no-console
+                console.warn('[devtools-detector]', state ? 'OPEN' : 'CLOSED', reason || '');
+            }
+
+            /* ---------------------------------------------
+               A) Size-based detection (docked DevTools)
+               DevTools docked right/bottom shrinks the
+               viewport while the outer window stays the same.
+               The threshold catches that gap.
+               --------------------------------------------- */
+            const THRESHOLD = 160; // px
+
+            function detectBySize() {
+                const wDelta = window.outerWidth  - window.innerWidth;
+                const hDelta = window.outerHeight - window.innerHeight;
+
+                // Guard against zero-sized outer window (some browsers report 0)
+                if (window.outerWidth === 0 && window.outerHeight === 0) {
+                    return false;
+                }
+
+                return (wDelta > THRESHOLD || hDelta > THRESHOLD);
+            }
+
+            /* ---------------------------------------------
+               B) Debugger-timing detection (undocked DevTools)
+               A `debugger` statement only pauses when a debugger
+               is attached. When paused, performance.now() around
+               it returns a large delta.
+               --------------------------------------------- */
+            function detectByDebugger() {
+                const t0 = performance.now();
+                // eslint-disable-next-line no-debugger
+                debugger;
+                const t1 = performance.now();
+                return (t1 - t0) > 100; // ms — paused = big gap
+            }
+
+            /* ---------------------------------------------
+               C) Console getter trap
+               If DevTools console is open, accessing the id
+               getter of the logged object triggers a pause.
+               This is a best-effort fallback for Chrome/Edge.
+               --------------------------------------------- */
+            let trapObject = {};
+            let trapFired = false;
+
+            Object.defineProperty(trapObject, 'id', {
+                get: function() {
+                    trapFired = true;
+                    return 'trap';
+                }
+            });
+
+            function runTrap() {
+                trapFired = false;
+                // eslint-disable-next-line no-console
+                console.log(trapObject);
+                // If DevTools console rendered it, the getter would have fired.
+                // Note: not 100% reliable, but useful as a fallback.
+            }
+
+            /* ---------------------------------------------
+               MASTER LOOP — runs detection, updates overlay
+               --------------------------------------------- */
+            function tick() {
+                const isOpen = detectBySize() || detectByDebugger();
+
+                if (isOpen) {
+                    setShown(true, detectBySize() ? 'size' : 'debugger');
+                } else {
+                    setShown(false, 'closed');
+                }
+            }
+
+            // Re-check on resize (docking / undocking triggers resize)
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(tick, 150);
+            });
+
+            // Periodic check — every 500ms while page is active
+            const intervalId = setInterval(tick, 500);
+
+            // Clean up if the page is hidden (saves CPU)
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    clearInterval(intervalId);
+                } else {
+                    tick();
+                    // Restart interval after returning to the tab
+                    // (we re-create it to avoid holding a stale interval)
+                    setTimeout(() => {
+                        setInterval(tick, 500);
+                    }, 100);
+                }
+            });
+
+            // First run
+            tick();
+        })();
     </script>
 </body>
 
