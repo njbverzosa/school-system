@@ -144,9 +144,6 @@ try {
 
 /* ------------------------------------------------------------
    Students for Enrollment — single combined list
-   - student_type IN ('O', 'N', 'T')
-   - not yet enrolled
-   - Pending rows still shown so admin can finish approval
    ------------------------------------------------------------ */
 $studentsForEnrollment = [];
 try {
@@ -195,8 +192,7 @@ try {
 }
 
 /* ------------------------------------------------------------
-   CHANGED: Enrolled Students
-   Only rows in enrolled_students where status = 'Active'
+   Enrolled Students — Active only
    ------------------------------------------------------------ */
 $enrolledStudents = [];
 try {
@@ -868,6 +864,11 @@ function studentTypeBadgeClass(string $t): string
             display: block;
         }
 
+        /* CHANGED: mirror the live preview so the camera is "flipped" */
+        .camera-box video {
+            transform: scaleX(-1);
+        }
+
         .camera-box canvas,
         .camera-box img.captured-preview { display: none; }
 
@@ -932,6 +933,12 @@ function studentTypeBadgeClass(string $t): string
             outline: none;
             border-color: var(--primary-2);
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .field-hint {
+            font-size: 11.5px;
+            color: var(--muted);
+            margin-top: 4px;
         }
 
         .camera-approve {
@@ -1354,7 +1361,7 @@ function studentTypeBadgeClass(string $t): string
         </div>
     </div>
 
-    <?php /* Camera + Contact + Approve modal */ ?>
+    <?php /* Camera + Contact + LRN + Approve modal */ ?>
     <div class="modal-overlay" id="cameraModal">
         <div class="modal-box camera-modal-box">
             <div class="camera-modal-head">
@@ -1393,6 +1400,15 @@ function studentTypeBadgeClass(string $t): string
                 <label class="field-label" for="cameraContactInput">Contact Number</label>
                 <input type="tel" class="field-input" id="cameraContactInput"
                     placeholder="e.g. 09123456789" autocomplete="tel" inputmode="tel" maxlength="15" />
+            </div>
+
+            <?php /* CHANGED: LRN field — 12-digit numeric only */ ?>
+            <div class="field-group">
+                <label class="field-label" for="cameraLrnInput">LRN (12 digits)</label>
+                <input type="text" class="field-input" id="cameraLrnInput"
+                    placeholder="Enter 12-digit LRN" autocomplete="off" inputmode="numeric"
+                    pattern="[0-9]{12}" maxlength="12" />
+                <div class="field-hint">Must be exactly 12 digits (numbers only).</div>
             </div>
 
             <button type="button" class="btn btn-success camera-approve" id="approveBtn" onclick="approveStudent()">
@@ -1519,8 +1535,14 @@ function studentTypeBadgeClass(string $t): string
         const retakeBtn = document.getElementById('retakeBtn');
         const approveBtn = document.getElementById('approveBtn');
         const cameraContactInput = document.getElementById('cameraContactInput');
+        const cameraLrnInput = document.getElementById('cameraLrnInput');
         const cameraStatus = document.getElementById('cameraStatus');
         const cameraStudentInfo = document.getElementById('cameraStudentInfo');
+
+        /* CHANGED: force LRN input to be numbers-only, max 12 */
+        cameraLrnInput.addEventListener('input', () => {
+            cameraLrnInput.value = cameraLrnInput.value.replace(/\D+/g, '').slice(0, 12);
+        });
 
         function setCameraStatus(msg, type) {
             cameraStatus.textContent = msg || '';
@@ -1577,6 +1599,7 @@ function studentTypeBadgeClass(string $t): string
                 '<br><span style="color:#64748b">' + escapeHtml(gradeTxt + sectionTxt) + '</span>';
 
             cameraContactInput.value = '';
+            cameraLrnInput.value = '';
             capturedDataUrl = '';
 
             cameraBox.classList.remove('captured');
@@ -1597,6 +1620,7 @@ function studentTypeBadgeClass(string $t): string
             capturedPreview.removeAttribute('src');
             capturedDataUrl = '';
             cameraContactInput.value = '';
+            cameraLrnInput.value = '';
             setCameraStatus('');
         }
 
@@ -1612,7 +1636,13 @@ function studentTypeBadgeClass(string $t): string
             cameraCanvas.height = h;
 
             const ctx = cameraCanvas.getContext('2d');
+
+            /* CHANGED: mirror the draw so the captured photo matches the flipped preview */
+            ctx.translate(w, 0);
+            ctx.scale(-1, 1);
             ctx.drawImage(cameraVideo, 0, 0, w, h);
+            /* reset transform so subsequent draws aren't affected */
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
 
             capturedDataUrl = cameraCanvas.toDataURL('image/jpeg', 0.85);
 
@@ -1621,7 +1651,7 @@ function studentTypeBadgeClass(string $t): string
 
             captureBtn.style.display = 'none';
             retakeBtn.style.display = '';
-            setCameraStatus('Photo captured. Fill in contact number and approve.', 'success');
+            setCameraStatus('Photo captured. Fill in contact number and LRN, then approve.', 'success');
         }
 
         function retakePhoto() {
@@ -1655,6 +1685,14 @@ function studentTypeBadgeClass(string $t): string
                 return;
             }
 
+            /* CHANGED: LRN must be exactly 12 digits */
+            const lrn = (cameraLrnInput.value || '').trim();
+            if (!/^\d{12}$/.test(lrn)) {
+                setCameraStatus('LRN must be exactly 12 digits (numbers only).', 'error');
+                cameraLrnInput.focus();
+                return;
+            }
+
             approveBtn.disabled = true;
             setCameraStatus('Submitting approval…');
 
@@ -1666,6 +1704,7 @@ function studentTypeBadgeClass(string $t): string
                 action: 'approve_with_capture',
                 account_number: cameraAccount,
                 contact_number: contact,
+                lrn: lrn,
                 grade_level: cameraGrade,
                 section: cameraSection,
                 photo_data: capturedDataUrl,
