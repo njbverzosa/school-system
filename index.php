@@ -2471,6 +2471,34 @@ try {
             background: rgba(255, 255, 255, 0.12);
         }
 
+        /* ── DEVTOOLS DETECTION OVERLAY ── */
+        #hackOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2147483647;
+            background: #000 center/contain no-repeat;
+            background-image: url('Images/hack.jpg');
+            cursor: not-allowed;
+        }
+
+        #hackOverlay.show {
+            display: block;
+        }
+
+        #hackOverlay .hack-note {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            opacity: .8;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
+        }
+
     </style>
 </head>
 
@@ -3131,6 +3159,11 @@ try {
         </div>
     </footer>
 
+    <!-- DEVTOOLS DETECTION OVERLAY -->
+    <div id="hackOverlay" role="alert" aria-live="assertive">
+        <div class="hack-note">Inspect tool detected — please close it to continue.</div>
+    </div>
+
     <script>
         const schoolsData = <?php echo json_encode($schoolsData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>;
 
@@ -3776,6 +3809,92 @@ try {
         document.querySelectorAll('[data-count]').forEach(el => counterObserver.observe(el));
 
         renderSchools();
+
+        /* ── DEVTOOLS DETECTION ── */
+        (function () {
+            const overlay = document.getElementById('hackOverlay');
+            if (!overlay) return;
+
+            let shown = false;
+
+            function showOverlay() {
+                if (shown) return;
+                shown = true;
+                overlay.classList.add('show');
+            }
+
+            function hideOverlay() {
+                if (!shown) return;
+                shown = false;
+                overlay.classList.remove('show');
+            }
+
+            /* Method 1: debugger timing — the `debugger` statement pauses when
+               the devtools panel is open, so the elapsed time spikes. */
+            let threshold = 100;
+            let start = performance.now();
+            // eslint-disable-next-line no-debugger
+            debugger;
+            let end = performance.now();
+            if (end - start > threshold) showOverlay();
+            else hideOverlay();
+
+            /* Method 2: periodic re-check every 800ms */
+            function checkDevtools() {
+                const t0 = performance.now();
+                // eslint-disable-next-line no-debugger
+                debugger;
+                const t1 = performance.now();
+                if (t1 - t0 > threshold) showOverlay();
+                else hideOverlay();
+            }
+            setInterval(checkDevtools, 800);
+
+            /* Method 3: keyboard shortcuts that open devtools */
+            document.addEventListener('keydown', (e) => {
+                const k = (e.key || '').toLowerCase();
+
+                if (e.key === 'F12') {
+                    showOverlay();
+                    e.preventDefault();
+                    return;
+                }
+                if (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k)) {
+                    showOverlay();
+                    e.preventDefault();
+                    return;
+                }
+                if (e.ctrlKey && k === 'u') {
+                    showOverlay();
+                    e.preventDefault();
+                    return;
+                }
+                if (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(k)) {
+                    showOverlay();
+                    e.preventDefault();
+                    return;
+                }
+            }, true);
+
+            /* Method 4: window resize — docked devtools shrink the viewport */
+            window.addEventListener('resize', () => {
+                const w = window.outerWidth - window.innerWidth;
+                const h = window.outerHeight - window.innerHeight;
+                if (w > 160 || h > 160) showOverlay();
+            });
+
+            /* Method 5: right-click long-press (1.5s) */
+            let rightClickTimer = null;
+            document.addEventListener('mousedown', (e) => {
+                if (e.button === 2) rightClickTimer = setTimeout(showOverlay, 1500);
+            });
+            document.addEventListener('mouseup', () => {
+                clearTimeout(rightClickTimer);
+            });
+
+            /* Prevent interaction with the page while overlay is visible */
+            overlay.addEventListener('click', (e) => e.stopPropagation());
+        })();
     </script>
 </body>
 

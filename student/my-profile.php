@@ -370,12 +370,13 @@ if ($user) {
             flex-wrap: wrap;
         }
 
+        /* ID-style photo — portrait aspect, scaled down */
         .student-avatar {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
+            width: 90px;
+            height: 115px;
+            border-radius: 8px;
             overflow: hidden;
-            border: 4px solid #fff;
+            border: 3px solid #fff;
             box-shadow: 0 8px 20px -8px rgba(15, 23, 42, .35);
             flex-shrink: 0;
             background: #e2e8f0;
@@ -387,11 +388,12 @@ if ($user) {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center top;
             display: block;
         }
 
         .student-avatar .avatar-fallback {
-            font-size: 44px;
+            font-size: 34px;
             color: #94a3b8;
         }
 
@@ -465,6 +467,7 @@ if ($user) {
             flex-direction: column;
             gap: 3px;
             min-width: 0;
+            position: relative;
         }
 
         .info-item.full {
@@ -485,12 +488,86 @@ if ($user) {
             color: var(--text);
             word-break: break-word;
             line-height: 1.4;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background .15s ease, box-shadow .15s ease;
+            padding: 2px 4px;
+            margin: -2px -4px;
+            min-height: 1.4em;
+        }
+
+        .info-item .info-value:hover {
+            background: #eef2ff;
         }
 
         .info-item .info-value.empty {
             color: #cbd5e1;
             font-weight: 400;
             font-style: italic;
+        }
+
+        /* Pencil hint */
+        .info-item .edit-hint {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            font-size: 10.5px;
+            color: #94a3b8;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .15s ease;
+        }
+
+        .info-item:hover .edit-hint {
+            opacity: 1;
+        }
+
+        /* Inline input */
+        .info-item .inline-input {
+            width: 100%;
+            font: inherit;
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--text);
+            padding: 2px 6px;
+            margin: -2px -6px;
+            border: 1px solid var(--primary-2);
+            border-radius: 4px;
+            background: #fff;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .info-item.saving .info-value {
+            opacity: .55;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10002;
+            background: #0f172a;
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 500;
+            box-shadow: 0 15px 30px -10px rgba(0, 0, 0, .4);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity .2s ease, transform .2s ease;
+            max-width: 320px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.error {
+            background: #b91c1c;
         }
 
         /* SPINNER */
@@ -694,12 +771,14 @@ if ($user) {
             }
 
             .student-avatar {
-                width: 84px;
-                height: 84px;
+                width: 74px;
+                height: 94px;
+                border-radius: 6px;
+                border-width: 2px;
             }
 
             .student-avatar .avatar-fallback {
-                font-size: 34px;
+                font-size: 28px;
             }
 
             .student-meta h2 {
@@ -716,6 +795,13 @@ if ($user) {
 
             .info-item .info-value {
                 font-size: 14px;
+            }
+
+            .toast {
+                left: 16px;
+                right: 16px;
+                bottom: 16px;
+                max-width: none;
             }
 
             .spinner {
@@ -815,17 +901,14 @@ if ($user) {
                         <?php
                         $profileFile = trim((string) ($user['profile_account'] ?? ''));
 
-                        // Has a real filename (not the default placeholder)?
                         $hasProfile = $profileFile !== ''
                             && strcasecmp($profileFile, 'profile-image.jpg') !== 0;
 
-                        // Absolute filesystem path to check the file exists on the server
-                        $absProfile = __DIR__ . 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/' . basename($profileFile);
+                        $absProfile = __DIR__ . '/../Students_Profile/' . basename($profileFile);
                         $fileExists = $hasProfile && is_file($absProfile);
 
-                        // Public URL (adjust domain/path if the folder is at the web root)
                         $profileUrl = $fileExists
-                            ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/' . rawurlencode($profileFile)
+                            ? '../Students_Profile/' . rawurlencode($profileFile)
                             : '';
                         ?>
                         <?php if ($profileUrl !== ''): ?>
@@ -857,56 +940,60 @@ if ($user) {
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="info-label">First Name</span>
-                            <span class="info-value"><?php echo htmlspecialchars($user['first_name'] ?? '—'); ?></span>
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value" data-field="first_name"><?php echo htmlspecialchars($user['first_name'] ?? '—'); ?></span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Middle Name</span>
-                            <span class="info-value"><?php echo htmlspecialchars($user['middle_name'] ?? '—'); ?></span>
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value" data-field="middle_name"><?php echo htmlspecialchars($user['middle_name'] ?? '—'); ?></span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Surname</span>
-                            <span class="info-value"><?php echo htmlspecialchars($user['surname'] ?? '—'); ?></span>
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value" data-field="surname"><?php echo htmlspecialchars($user['surname'] ?? '—'); ?></span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Age</span>
-                            <span class="info-value <?php echo empty($user['age']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['age']) ? 'empty' : ''; ?>" data-field="age">
                                 <?php echo !empty($user['age']) ? htmlspecialchars((string) $user['age']) : 'Not provided'; ?>
                             </span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Sex</span>
-                            <span class="info-value <?php echo empty($user['sex']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['sex']) ? 'empty' : ''; ?>" data-field="sex">
                                 <?php echo !empty($user['sex']) ? htmlspecialchars($user['sex']) : 'Not provided'; ?>
                             </span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Birth Date</span>
-                            <span class="info-value <?php echo empty($user['birth_date']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['birth_date']) ? 'empty' : ''; ?>" data-field="birth_date">
                                 <?php echo !empty($user['birth_date']) ? htmlspecialchars($user['birth_date']) : 'Not provided'; ?>
                             </span>
                         </div>
 
-
                         <div class="info-item">
                             <span class="info-label">Contact Number</span>
-                            <span class="info-value <?php echo empty($user['contact_number']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['contact_number']) ? 'empty' : ''; ?>" data-field="contact_number">
                                 <?php echo !empty($user['contact_number']) ? htmlspecialchars($user['contact_number']) : 'Not provided'; ?>
                             </span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Birth Place</span>
-                            <span class="info-value <?php echo empty($user['birth_place']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['birth_place']) ? 'empty' : ''; ?>" data-field="birth_place">
                                 <?php echo !empty($user['birth_place']) ? htmlspecialchars($user['birth_place']) : 'Not provided'; ?>
                             </span>
                         </div>
 
-
-
-
-
                         <div class="info-item full">
                             <span class="info-label">Address</span>
-                            <span class="info-value <?php echo empty($user['address']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['address']) ? 'empty' : ''; ?>" data-field="address">
                                 <?php echo !empty($user['address']) ? htmlspecialchars($user['address']) : 'Not provided'; ?>
                             </span>
                         </div>
@@ -919,13 +1006,15 @@ if ($user) {
                     <div class="info-grid">
                         <div class="info-item">
                             <span class="info-label">Guardian</span>
-                            <span class="info-value <?php echo empty($user['guardian']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['guardian']) ? 'empty' : ''; ?>" data-field="guardian">
                                 <?php echo !empty($user['guardian']) ? htmlspecialchars($user['guardian']) : 'Not provided'; ?>
                             </span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Guardian Contact Number</span>
-                            <span class="info-value <?php echo empty($user['guardian_contact_number']) ? 'empty' : ''; ?>">
+                            <i class="fas fa-pencil edit-hint"></i>
+                            <span class="info-value <?php echo empty($user['guardian_contact_number']) ? 'empty' : ''; ?>" data-field="guardian_contact_number">
                                 <?php echo !empty($user['guardian_contact_number']) ? htmlspecialchars($user['guardian_contact_number']) : 'Not provided'; ?>
                             </span>
                         </div>
@@ -935,6 +1024,8 @@ if ($user) {
             </section>
         <?php endif; ?>
     </main>
+
+    <div class="toast" id="editToast" role="status" aria-live="polite"></div>
 
     <script>
         const navToggle = document.getElementById('navToggle');
@@ -951,6 +1042,159 @@ if ($user) {
                 navDropdown.classList.remove('open');
                 navToggle.setAttribute('aria-expanded', 'false');
             }
+        });
+
+        /* ── INLINE EDIT ── */
+        const editToast = document.getElementById('editToast');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        let toastTimer = null;
+        function showToast(message, isError = false) {
+            if (!editToast) return;
+            editToast.textContent = message;
+            editToast.className = 'toast show' + (isError ? ' error' : '');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                editToast.classList.remove('show');
+            }, 2600);
+        }
+
+        /* Keep track of which field is currently being edited so we can
+           auto-commit it when the user taps/clicks on another field */
+        let activeEditor = null; // { valueEl, item, input, current, finish }
+
+        function startEdit(valueEl) {
+            if (!valueEl || valueEl.dataset.editing === '1') return;
+
+            /* If another field is currently open, commit it first */
+            if (activeEditor) {
+                activeEditor.finish(true);
+            }
+
+            const field   = valueEl.dataset.field;
+            if (!field) return;
+
+            const item    = valueEl.closest('.info-item');
+            const current = valueEl.classList.contains('empty') ? '' : valueEl.textContent.trim();
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'inline-input';
+            input.value = current;
+            input.setAttribute('data-field', field);
+
+            valueEl.dataset.editing = '1';
+            valueEl.style.display = 'none';
+            item.appendChild(input);
+            input.focus();
+            input.select();
+
+            let committed = false;
+
+            const finish = (save) => {
+                if (committed) return;
+                committed = true;
+
+                const newValue = input.value.trim();
+
+                /* Detach from global tracker */
+                if (activeEditor && activeEditor.valueEl === valueEl) {
+                    activeEditor = null;
+                }
+
+                if (!save || newValue === current) {
+                    input.remove();
+                    valueEl.style.display = '';
+                    delete valueEl.dataset.editing;
+                    return;
+                }
+
+                item.classList.add('saving');
+                valueEl.textContent = newValue || 'Not provided';
+                valueEl.classList.toggle('empty', newValue === '');
+                valueEl.style.display = '';
+                input.remove();
+
+                fetch('../API_STUDENT/student-info.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: new URLSearchParams({
+                        csrf_token: csrfToken,
+                        field: field,
+                        value: newValue,
+                    }),
+                })
+                .then(r => r.json())
+                .then(data => {
+                    item.classList.remove('saving');
+                    if (data.success) {
+                        if (typeof data.value === 'string') {
+                            valueEl.textContent = data.value || 'Not provided';
+                            valueEl.classList.toggle('empty', data.value === '');
+                        }
+                        showToast('Saved.');
+                    } else {
+                        valueEl.textContent = current || 'Not provided';
+                        valueEl.classList.toggle('empty', current === '');
+                        showToast(data.message || 'Could not save.', true);
+                    }
+                })
+                .catch(() => {
+                    item.classList.remove('saving');
+                    valueEl.textContent = current || 'Not provided';
+                    valueEl.classList.toggle('empty', current === '');
+                    showToast('Network error. Try again.', true);
+                })
+                .finally(() => {
+                    delete valueEl.dataset.editing;
+                });
+            };
+
+            activeEditor = { valueEl, item, input, current, finish };
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    finish(true);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    finish(false);
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                /* Blur fires when focus leaves the input — e.g. user taps another field.
+                   Commit the value. */
+                finish(true);
+            });
+        }
+
+        /* Wire up dblclick (desktop) + double-tap (mobile) */
+        document.querySelectorAll('.info-value[data-field]').forEach((el) => {
+            el.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                startEdit(el);
+            });
+
+            let lastTap = 0;
+            el.addEventListener('touchend', (e) => {
+                const now = Date.now();
+                if (now - lastTap < 320) {
+                    e.preventDefault();
+                    startEdit(el);
+                    lastTap = 0;
+                } else {
+                    lastTap = now;
+                }
+            });
+        });
+
+        /* Global tap/click outside the input → commit (acts as "tap the other data") */
+        document.addEventListener('pointerdown', (e) => {
+            if (!activeEditor) return;
+            if (e.target === activeEditor.input) return;
+            /* Let the click go through so the other field gets its dblclick handler */
+            activeEditor.finish(true);
         });
     </script>
 </body>
