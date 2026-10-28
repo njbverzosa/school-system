@@ -1921,46 +1921,50 @@ try {
             }
         }
 
-        /* MOBILE */
+        /* MOBILE (Centered Logo, Text, and Burger) */
         @media (max-width: 820px) {
             .nav-links {
                 display: none;
             }
 
-            .nav-toggle {
-                display: grid;
-                width: 42px;
-                height: 42px;
-                font-size: 16px;
-            }
-
+            /* Center everything vertically and horizontally */
             .nav-inner {
-                padding: 12px 0;
-                gap: 10px;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 16px 0;
+                gap: 12px;
+                min-height: auto;
             }
 
             .logo {
                 gap: 10px;
-                min-width: 0;
-                flex: 1;
+                flex: none; /* Removed flex: 1 to prevent pushing layout */
+                justify-content: center;
             }
 
             .logo-mark {
-                width: 42px;
-                height: 42px;
+                width: 50px;
+                height: 50px;
                 border-radius: 5px;
                 padding: 4px;
             }
 
             .logo-text b {
-                font-size: 14.5px;
-                max-width: 150px;
+                font-size: 18px;
+                max-width: none;
+                text-align: center;
             }
 
             .logo-text span {
-                font-size: 9.5px;
-                max-width: 150px;
+                font-size: 11px;
+                max-width: none;
                 letter-spacing: .08em;
+                text-align: center;
+            }
+
+            .nav-actions {
+                margin-top: 4px;
             }
 
             .nav-actions .btn-login,
@@ -1968,11 +1972,18 @@ try {
                 display: none;
             }
 
+            .nav-toggle {
+                display: grid;
+                width: 46px;
+                height: 46px;
+                font-size: 20px;
+            }
+
             .mobile-menu {
-                top: 68px;
+                top: 135px; /* Adjusted top since nav bar is taller now */
                 left: 12px;
                 right: 12px;
-                max-height: calc(100vh - 80px);
+                max-height: calc(100vh - 150px);
             }
 
             .hero {
@@ -2271,12 +2282,12 @@ try {
             }
 
             .nav-inner {
-                padding: 10px 0;
+                padding: 12px 0;
             }
 
             .logo-mark {
-                width: 38px;
-                height: 38px;
+                width: 42px;
+                height: 42px;
                 padding: 4px;
             }
 
@@ -2285,26 +2296,20 @@ try {
             }
 
             .logo-text b {
-                font-size: 13.5px;
-                max-width: 130px;
+                font-size: 16px;
             }
 
             .logo-text span {
-                font-size: 9px;
-                max-width: 130px;
-            }
-
-            .nav-actions {
-                gap: 6px;
+                font-size: 10px;
             }
 
             .nav-toggle {
-                width: 38px;
-                height: 38px;
+                width: 42px;
+                height: 42px;
             }
 
             .mobile-menu {
-                top: 62px;
+                top: 125px;
                 left: 10px;
                 right: 10px;
             }
@@ -2375,20 +2380,18 @@ try {
         /* TINY */
         @media (max-width: 380px) {
             .logo-mark {
-                width: 34px;
-                height: 34px;
+                width: 36px;
+                height: 36px;
                 padding: 3px;
                 border-radius: 10px;
             }
 
             .logo-text b {
-                font-size: 12.5px;
-                max-width: 110px;
+                font-size: 14px;
             }
 
             .logo-text span {
-                font-size: 8.5px;
-                max-width: 110px;
+                font-size: 9px;
             }
 
             .hero-brand-row {
@@ -2609,7 +2612,7 @@ try {
         </div>
     </div>
 
-    <!-- LOGIN MODAL (Shorter Width + Password Masking + No Cancel Button) -->
+    <!-- LOGIN MODAL -->
     <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
         <div class="modal-card">
             <div class="modal-head login-head">
@@ -2636,7 +2639,6 @@ try {
 
                     <div class="form-group">
                         <label for="loginPin">6-Digit PIN <span class="req">*</span></label>
-                        <!-- Changed type to "password" so it shows as dots -->
                         <input type="password" id="loginPin" name="pin" class="pin-input" placeholder="••••••"
                             inputmode="numeric" maxlength="6" pattern="\d{6}" autocomplete="current-password" required>
                         <div class="err-msg" id="loginPinErr">Dapat eksaktong 6 digit ang PIN.</div>
