@@ -127,10 +127,10 @@ if ($userType === 'student') {
 
     /* Old Student + Enrolled  → academic portal
        Everyone else (N/T, or O but not enrolled) → enrollment form */
-    if (in_array($studentType, ['O', 'N', 'T'], true) && $enrollmentStatus === 'enrolled') {
+    if (in_array($studentType, ['N', 'T'], true) && $enrollmentStatus === 'Enrolled') {
         $redirect = 'student/academic-information.php';
     } else {
-        $redirect = 'student/student-enrollment.php';
+        $redirect = 'student/academic-information.php';
     }
 } elseif ($userType === 'admin') {
     $redirect = 'admin/dashboard.php';
