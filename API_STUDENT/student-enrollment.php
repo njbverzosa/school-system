@@ -121,10 +121,15 @@ if ($enrollmentAccess !== 1) {
     redirectHome();
 }
 
-/* Already enrolled? (safety check even though enrollment_access should not be 1 in that case) */
+/* Already enrolled or already pending? */
 $currentEnrollmentStatus = strtolower(trim((string) ($student['enrollment_status'] ?? 'not enrolled')));
 if (in_array($currentEnrollmentStatus, ['enrolled', 'active'], true)) {
     flash('enroll_error', 'You are already enrolled for this academic year.');
+    redirectHome();
+}
+// CHANGED: block re-submission when a pending request already exists
+if ($currentEnrollmentStatus === 'pending') {
+    flash('enroll_error', 'You already submitted an enrollment request. Please wait for approval.');
     redirectHome();
 }
 
@@ -133,10 +138,11 @@ if (in_array($currentEnrollmentStatus, ['enrolled', 'active'], true)) {
    ------------------------------------------------------------ */
 $currentYear = currentAcademicYear();
 try {
-    $stmt = $pdo->prepare("SELECT id FROM enrolled_students WHERE account_number = ? AND academic_year = ? LIMIT 1");
+    $stmt = $pdo->prepare("SELECT status FROM enrolled_students WHERE account_number = ? AND academic_year = ? LIMIT 1");
     $stmt->execute([$accountNumber, $currentYear]);
-    if ($stmt->fetchColumn()) {
-        flash('enroll_error', 'You are already enrolled for the ' . $currentYear . ' academic year.');
+    $existingStatus = $stmt->fetchColumn();
+    if ($existingStatus !== false) {
+        flash('enroll_error', 'You already have an enrollment record (' . $existingStatus . ') for ' . $currentYear . '.');
         redirectHome();
     }
 } catch (PDOException $e) {
@@ -193,18 +199,22 @@ if (!in_array($postedSection, $allowedSections, true)) {
 }
 
 /* ------------------------------------------------------------
-   6. Insert into enrolled_students + flip students.enrollment_status
+   6. Submit enrollment request (Pending)
+   - Insert request row with status 'Pending'
+   - Set students.enrollment_status = 'Pending'
+   - Keep students.enrollment_access = 1 (still open)
    ------------------------------------------------------------ */
 $schoolName = trim((string) ($student['school_name'] ?? ''));
 
 try {
     $pdo->beginTransaction();
 
+    // CHANGED: insert with status 'Pending' instead of 'Active'
     $stmt = $pdo->prepare("
         INSERT INTO enrolled_students
             (account_number, academic_year, grade_level, section, school_name, status)
         VALUES
-            (:account_number, :academic_year, :grade_level, :section, :school_name, 'Active')
+            (:account_number, :academic_year, :grade_level, :section, :school_name, 'Pending')
     ");
     $stmt->execute([
         ':account_number' => $accountNumber,
@@ -214,9 +224,10 @@ try {
         ':school_name'    => $schoolName,
     ]);
 
+    // CHANGED: set status to 'Pending' and leave enrollment_access at 1
     $stmt = $pdo->prepare("
         UPDATE students
-        SET enrollment_status = 'Enrolled', enrollment_access = '0'
+        SET enrollment_status = 'Pending'
         WHERE account_number = ?
     ");
     $stmt->execute([$accountNumber]);
@@ -226,10 +237,10 @@ try {
     if ($pdo->inTransaction()) $pdo->rollBack();
 
     if ($e->getCode() === '23000') {
-        flash('enroll_error', 'You are already enrolled for the ' . $currentYear . ' academic year.');
+        flash('enroll_error', 'You already have an enrollment request for the ' . $currentYear . ' academic year.');
     } else {
         error_log("enrollment insert failed: " . $e->getMessage());
-        flash('enroll_error', 'Enrollment failed. Please try again later.');
+        flash('enroll_error', 'Enrollment submission failed. Please try again later.');
     }
     redirectHome();
 }
@@ -256,10 +267,11 @@ try {
    8. Success
    ------------------------------------------------------------ */
 $_SESSION['flash']['just_enrolled'] = true;
+// CHANGED: success message reflects the Pending state
 flash(
     'enroll_success',
-    'You are now enrolled for ' . $currentYear
-    . ' as Grade ' . $gradeLevel
-    . ' - ' . $postedSection . '.'
+    'Your enrollment request for ' . $currentYear
+    . ' (Grade ' . $gradeLevel . ' - ' . $postedSection . ') has been submitted. '
+    . 'Status: Pending. Please wait for the school to approve it.'
 );
 redirectHome();

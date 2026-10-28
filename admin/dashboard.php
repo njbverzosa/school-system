@@ -142,47 +142,62 @@ try {
     $enrollmentOpen = false;
 }
 
-/* New Students — student_type = 'N', not yet enrolled */
-$newStudents = [];
+/* ------------------------------------------------------------
+   Students for Enrollment — single combined list
+   - student_type IN ('O', 'N', 'T')
+   - not yet enrolled
+   - Pending rows still shown so admin can finish approval
+   ------------------------------------------------------------ */
+$studentsForEnrollment = [];
 try {
     $stmt = $pdo->prepare("
         SELECT
-            account_number, first_name, middle_name, surname,
-            grade_level, sex, birth_date, age, school_name,
-            contact_number, guardian, guardian_contact_number,
-            student_type, registered_date, enrollment_status
-        FROM students
-        WHERE student_type = 'N'
-          AND (enrollment_status IS NULL OR enrollment_status <> 'enrolled')
-        ORDER BY surname, first_name
+            s.account_number,
+            s.first_name,
+            s.middle_name,
+            s.surname,
+            s.grade_level,
+            s.sex,
+            s.birth_date,
+            s.age,
+            s.school_name,
+            s.contact_number,
+            s.guardian,
+            s.guardian_contact_number,
+            s.student_type,
+            s.registered_date,
+            s.enrollment_status,
+            e.section        AS pending_section,
+            e.academic_year  AS pending_academic_year,
+            e.status         AS enrollment_record_status
+        FROM students s
+        LEFT JOIN enrolled_students e
+          ON e.account_number = s.account_number
+         AND e.status = 'Pending'
+        WHERE s.student_type IN ('O', 'N', 'T')
+          AND (
+                s.enrollment_status IS NULL
+                OR LOWER(s.enrollment_status) NOT IN ('enrolled', 'active')
+              )
+        ORDER BY
+            CASE s.student_type
+                WHEN 'O' THEN 1
+                WHEN 'N' THEN 2
+                WHEN 'T' THEN 3
+                ELSE 4
+            END,
+            s.surname, s.first_name
     ");
     $stmt->execute();
-    $newStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $studentsForEnrollment = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (PDOException $e) {
-    error_log("new students fetch failed: " . $e->getMessage());
+    error_log("students-for-enrollment fetch failed: " . $e->getMessage());
 }
 
-/* Transferees — student_type = 'T', not yet enrolled */
-$transferees = [];
-try {
-    $stmt = $pdo->prepare("
-        SELECT
-            account_number, first_name, middle_name, surname,
-            grade_level, sex, birth_date, age, school_name,
-            contact_number, guardian, guardian_contact_number,
-            student_type, registered_date, enrollment_status
-        FROM students
-        WHERE student_type = 'T'
-          AND (enrollment_status IS NULL OR enrollment_status <> 'enrolled')
-        ORDER BY surname, first_name
-    ");
-    $stmt->execute();
-    $transferees = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log("transferees fetch failed: " . $e->getMessage());
-}
-
-/* Enrolled Students */
+/* ------------------------------------------------------------
+   CHANGED: Enrolled Students
+   Only rows in enrolled_students where status = 'Active'
+   ------------------------------------------------------------ */
 $enrolledStudents = [];
 try {
     $stmt = $pdo->query("
@@ -197,6 +212,7 @@ try {
             s.contact_number
         FROM enrolled_students e
         LEFT JOIN students s ON s.account_number = e.account_number
+        WHERE e.status = 'Active'
         ORDER BY s.surname, s.first_name
     ");
     $enrolledStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -229,6 +245,35 @@ $adminDisplayName = trim(
     ($adminUser['middle_name'] ?? '') . ' ' .
     ($adminUser['surname'] ?? '')
 );
+
+/* Helper: student type label */
+function studentTypeLabel(string $t): string
+{
+    switch (strtoupper(trim($t))) {
+        case 'O':
+            return 'Old Student';
+        case 'N':
+            return 'New Student';
+        case 'T':
+            return 'Transferee';
+        default:
+            return $t !== '' ? $t : '—';
+    }
+}
+
+function studentTypeBadgeClass(string $t): string
+{
+    switch (strtoupper(trim($t))) {
+        case 'O':
+            return 'type-o';
+        case 'N':
+            return 'type-n';
+        case 'T':
+            return 'type-t';
+        default:
+            return 'type-default';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fil">
@@ -614,6 +659,37 @@ $adminDisplayName = trim(
             margin-top: 2px;
         }
 
+        /* Student type badges — no background, colored text only */
+        .type-badge {
+            display: inline-block;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 0;
+            border-radius: 0;
+            letter-spacing: .02em;
+            background: transparent;
+            border: none;
+        }
+
+        .type-o { color: #1e40af; }
+        .type-n { color: #166534; }
+        .type-t { color: #92400e; }
+        .type-default { color: #64748b; }
+
+        /* Pending pill — no background, colored text only */
+        .pending-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 3px 0;
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            color: #92400e;
+        }
+
         .btn {
             display: inline-flex;
             align-items: center;
@@ -635,6 +711,9 @@ $adminDisplayName = trim(
         .btn-success { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
         .btn-success:hover { background: #d1fae5; }
 
+        .btn-primary { background: #eef2ff; color: #1e40af; border: 1px solid #c7d2fe; }
+        .btn-primary:hover { background: #e0e7ff; }
+
         .btn-cancel {
             background: #fff;
             color: var(--text);
@@ -649,41 +728,8 @@ $adminDisplayName = trim(
 
         .btn-cancel:hover { background: #f1f5f9; }
 
-        /* INLINE ENROLLMENT CONTROLS */
-        .enroll-controls {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: nowrap;
-        }
-
-        .mini-select {
-            font-family: inherit;
-            font-size: 12.5px;
-            padding: 6px 24px 6px 8px;
-            border: 1px solid var(--line);
-            border-radius: 6px;
-            background: #fff;
-            color: var(--text);
-            cursor: pointer;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 6px center;
-            background-size: 12px;
-            min-width: 100px;
-            transition: border-color .15s, box-shadow .15s;
-        }
-
-        .mini-select:focus {
-            outline: none;
-            border-color: var(--primary-2);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-        }
-
         .btn-mini { padding: 6px 12px; font-size: 12.5px; border-radius: 6px; gap: 5px; }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
 
         .filter-select {
             font-family: inherit;
@@ -754,6 +800,157 @@ $adminDisplayName = trim(
         .modal-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
         .modal-box p { font-size: 14.5px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+
+        /* Camera enrollment modal */
+        .camera-modal-box {
+            max-width: 520px;
+            max-height: 92vh;
+            overflow-y: auto;
+        }
+
+        .camera-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .camera-modal-head h3 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .camera-close {
+            background: transparent;
+            border: none;
+            font-size: 18px;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            transition: background .15s, color .15s;
+        }
+
+        .camera-close:hover { background: #f1f5f9; color: var(--text); }
+
+        .camera-student-info {
+            background: #f8fafc;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            font-size: 13.5px;
+        }
+
+        .camera-student-info strong { color: var(--text); }
+
+        .camera-box {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            background: #0f172a;
+            border-radius: 10px;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+        }
+
+        .camera-box video,
+        .camera-box canvas,
+        .camera-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .camera-box canvas,
+        .camera-box img.captured-preview { display: none; }
+
+        .camera-box.captured video { display: none; }
+        .camera-box.captured canvas,
+        .camera-box.captured img.captured-preview { display: block; }
+
+        .camera-placeholder {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            color: rgba(255, 255, 255, .55);
+            font-size: 13.5px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .camera-placeholder i {
+            display: block;
+            font-size: 30px;
+            margin-bottom: 8px;
+            opacity: .7;
+        }
+
+        .camera-box.captured .camera-placeholder,
+        .camera-box.streaming .camera-placeholder { display: none; }
+
+        .camera-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .camera-actions .btn { flex: 1; }
+
+        .field-group { margin-top: 16px; }
+
+        .field-label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .field-input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14.5px;
+            color: var(--text);
+            background: #fff;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .field-input:focus {
+            outline: none;
+            border-color: var(--primary-2);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .camera-approve {
+            margin-top: 20px;
+            width: 100%;
+            padding: 13px;
+            font-size: 15px;
+        }
+
+        .camera-status {
+            font-size: 12.5px;
+            color: var(--muted);
+            margin-top: 8px;
+            text-align: center;
+            min-height: 18px;
+        }
+
+        .camera-status.error { color: #b91c1c; font-weight: 600; }
+        .camera-status.success { color: #065f46; font-weight: 600; }
 
         /* STATUS MODAL */
         .status-modal-overlay {
@@ -887,8 +1084,8 @@ $adminDisplayName = trim(
             .stat-card { padding: 16px; }
             .section-head { margin-bottom: 14px; }
             .section-head h2 { font-size: 16px; }
-            .enroll-controls { flex-wrap: wrap; }
             .filter-select { width: 100%; }
+            .camera-actions { flex-direction: column; }
         }
 
         @media (max-width: 400px) {
@@ -991,11 +1188,13 @@ $adminDisplayName = trim(
             </div>
         </section>
 
-        <?php if (!empty($newStudents)): ?>
+        <?php /* Single combined table (Old, New, Transferee) with camera Action */ ?>
+        <?php if (!empty($studentsForEnrollment)): ?>
             <section class="section">
                 <div class="section-head">
                     <div>
-                        <h2>New Students</h2>
+                        <h2>Students for Enrollment</h2>
+                        <p>Old Students, New Students, and Transferees awaiting enrollment.</p>
                     </div>
                 </div>
                 <div class="table-wrap">
@@ -1004,13 +1203,15 @@ $adminDisplayName = trim(
                             <tr>
                                 <th>Account #</th>
                                 <th>Full Name</th>
+                                <th>Type</th>
                                 <th>Grade Level</th>
                                 <th>Sex</th>
-                                <th>Enroll (Grade / Section)</th>
+                                <th>Status</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($newStudents as $s): ?>
+                            <?php foreach ($studentsForEnrollment as $s): ?>
                                 <?php
                                 $sFullName = trim(
                                     ($s['first_name'] ?? '') . ' ' .
@@ -1019,7 +1220,8 @@ $adminDisplayName = trim(
                                 );
                                 $sContact = trim((string) ($s['contact_number'] ?? ''));
                                 $sAccount = (string) ($s['account_number'] ?? '');
-                                $currentGrade = (int) ($s['grade_level'] ?? 0);
+                                $sType = (string) ($s['student_type'] ?? '');
+                                $isPendingRow = (strtolower((string) ($s['enrollment_record_status'] ?? '')) === 'pending');
                                 ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
@@ -1031,101 +1233,32 @@ $adminDisplayName = trim(
                                             <?php endif; ?>
                                         </div>
                                     </td>
-                                    <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
-                                    <td><?php echo htmlspecialchars($s['sex'] ?? '—'); ?></td>
                                     <td>
-                                        <div class="enroll-controls">
-                                            <select class="mini-select grade-select"
-                                                id="grade_<?php echo htmlspecialchars($sAccount); ?>"
-                                                data-account="<?php echo htmlspecialchars($sAccount); ?>"
-                                                onchange="updateSections(this)">
-                                                <option value="">Grade</option>
-                                                <?php foreach ($gradeOptions as $g): ?>
-                                                    <option value="<?php echo $g; ?>" <?php echo $currentGrade === (int) $g ? 'selected' : ''; ?>>
-                                                        Grade <?php echo $g; ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <select class="mini-select" id="section_<?php echo htmlspecialchars($sAccount); ?>">
-                                                <option value="">Section</option>
-                                            </select>
-                                            <button type="button" class="btn btn-success btn-mini"
-                                                onclick="openEnrollModal('<?php echo htmlspecialchars($sAccount); ?>', '<?php echo htmlspecialchars(addslashes($sFullName)); ?>')">
-                                                <i class="fas fa-check"></i> Enroll
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        <?php endif; ?>
-
-        <?php if (!empty($transferees)): ?>
-            <section class="section">
-                <div class="section-head">
-                    <div>
-                        <h2>Transferees</h2>
-                    </div>
-                </div>
-                <div class="table-wrap">
-                    <table class="data">
-                        <thead>
-                            <tr>
-                                <th>Account #</th>
-                                <th>Full Name</th>
-                                <th>Grade Level</th>
-                                <th>Sex</th>
-                                <th>Enroll (Grade / Section)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($transferees as $s): ?>
-                                <?php
-                                $sFullName = trim(
-                                    ($s['first_name'] ?? '') . ' ' .
-                                    ($s['middle_name'] ?? '') . ' ' .
-                                    ($s['surname'] ?? '')
-                                );
-                                $sContact = trim((string) ($s['contact_number'] ?? ''));
-                                $sAccount = (string) ($s['account_number'] ?? '');
-                                $currentGrade = (int) ($s['grade_level'] ?? 0);
-                                ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
-                                    <td>
-                                        <div class="name-block">
-                                            <span><?php echo htmlspecialchars($sFullName); ?></span>
-                                            <?php if ($sContact !== ''): ?>
-                                                <span class="contact-sub"><?php echo htmlspecialchars($sContact); ?></span>
-                                            <?php endif; ?>
-                                        </div>
+                                        <span class="type-badge <?php echo htmlspecialchars(studentTypeBadgeClass($sType)); ?>">
+                                            <?php echo htmlspecialchars(studentTypeLabel($sType)); ?>
+                                        </span>
                                     </td>
                                     <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
                                     <td><?php echo htmlspecialchars($s['sex'] ?? '—'); ?></td>
                                     <td>
-                                        <div class="enroll-controls">
-                                            <select class="mini-select grade-select"
-                                                id="grade_<?php echo htmlspecialchars($sAccount); ?>"
-                                                data-account="<?php echo htmlspecialchars($sAccount); ?>"
-                                                onchange="updateSections(this)">
-                                                <option value="">Grade</option>
-                                                <?php foreach ($gradeOptions as $g): ?>
-                                                    <option value="<?php echo $g; ?>" <?php echo $currentGrade === (int) $g ? 'selected' : ''; ?>>
-                                                        Grade <?php echo $g; ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                            <select class="mini-select" id="section_<?php echo htmlspecialchars($sAccount); ?>">
-                                                <option value="">Section</option>
-                                            </select>
-                                            <button type="button" class="btn btn-success btn-mini"
-                                                onclick="openEnrollModal('<?php echo htmlspecialchars($sAccount); ?>', '<?php echo htmlspecialchars(addslashes($sFullName)); ?>')">
-                                                <i class="fas fa-check"></i> Enroll
-                                            </button>
-                                        </div>
+                                        <?php if ($isPendingRow): ?>
+                                            <span class="pending-pill">
+                                                <i class="fas fa-hourglass-half"></i> Pending
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="type-badge type-default">Not Enrolled</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-primary btn-mini"
+                                            onclick="openCameraModal(
+                                                '<?php echo htmlspecialchars($sAccount, ENT_QUOTES); ?>',
+                                                '<?php echo htmlspecialchars(addslashes($sFullName), ENT_QUOTES); ?>',
+                                                '<?php echo htmlspecialchars(addslashes((string) ($s['grade_level'] ?? '')), ENT_QUOTES); ?>',
+                                                '<?php echo htmlspecialchars(addslashes((string) ($s['pending_section'] ?? '')), ENT_QUOTES); ?>'
+                                            )">
+                                            <i class="fas fa-camera"></i> Take Camera
+                                        </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -1221,24 +1354,52 @@ $adminDisplayName = trim(
         </div>
     </div>
 
-    <div class="modal-overlay" id="enrollModal">
-        <div class="modal-box">
-            <h3 style="color: #1d4ed8;">
-                <i class="fas fa-user-plus" style="margin-right: 6px;"></i> Confirm Enrollment
-            </h3>
-            <p>
-                You are about to enroll <strong id="enrollStudentName">this student</strong> into
-                <strong id="enrollSummary">—</strong>.<br><br>
-                This will add the student to <em>enrolled_students</em> and mark their status as
-                <strong>Enrolled</strong>. This action cannot be undone from this dashboard.
-            </p>
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel" onclick="closeEnrollModal()">Cancel</button>
-                <button type="button" class="btn btn-success" id="enrollConfirmBtn"
-                    onclick="confirmEnrollStudent()">
-                    <i class="fas fa-check"></i> Proceed
+    <?php /* Camera + Contact + Approve modal */ ?>
+    <div class="modal-overlay" id="cameraModal">
+        <div class="modal-box camera-modal-box">
+            <div class="camera-modal-head">
+                <h3><i class="fas fa-camera"></i> Approve Student</h3>
+                <button type="button" class="camera-close" onclick="closeCameraModal()" aria-label="Close">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
+
+            <div class="camera-student-info" id="cameraStudentInfo">
+                Loading student…
+            </div>
+
+            <div class="camera-box" id="cameraBox">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+                <canvas id="cameraCanvas"></canvas>
+                <img id="capturedPreview" class="captured-preview" alt="Captured photo" />
+                <div class="camera-placeholder" id="cameraPlaceholder">
+                    <div>
+                        <i class="fas fa-video"></i>
+                        Camera preview will appear here
+                    </div>
+                </div>
+            </div>
+
+            <div class="camera-actions">
+                <button type="button" class="btn btn-primary" id="captureBtn" onclick="capturePhoto()">
+                    <i class="fas fa-camera"></i> Capture
+                </button>
+                <button type="button" class="btn btn-cancel" id="retakeBtn" onclick="retakePhoto()" style="display:none;">
+                    <i class="fas fa-rotate-left"></i> Retake
+                </button>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="cameraContactInput">Contact Number</label>
+                <input type="tel" class="field-input" id="cameraContactInput"
+                    placeholder="e.g. 09123456789" autocomplete="tel" inputmode="tel" maxlength="15" />
+            </div>
+
+            <button type="button" class="btn btn-success camera-approve" id="approveBtn" onclick="approveStudent()">
+                <i class="fas fa-check"></i> Approve Student
+            </button>
+
+            <div class="camera-status" id="cameraStatus"></div>
         </div>
     </div>
 
@@ -1260,64 +1421,12 @@ $adminDisplayName = trim(
             }
         });
 
-        /* ── GRADE → SECTION MAP ── */
-        const sectionMap = <?php echo $sectionMapJson; ?>;
-
-        function populateSections(account, selectedGrade, keepCurrent) {
-            const sectionEl = document.getElementById('section_' + account);
-            if (!sectionEl) return;
-
-            const sections = (selectedGrade && sectionMap[selectedGrade])
-                ? sectionMap[selectedGrade]
-                : [];
-
-            const currentVal = keepCurrent ? sectionEl.value : '';
-
-            sectionEl.innerHTML = '';
-
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = 'Section';
-            sectionEl.appendChild(placeholder);
-
-            if (sections.length === 0) {
-                const none = document.createElement('option');
-                none.value = '';
-                none.textContent = 'Select a grade first';
-                none.disabled = true;
-                sectionEl.appendChild(none);
-                return;
-            }
-
-            sections.forEach((sec) => {
-                const opt = document.createElement('option');
-                opt.value = sec;
-                opt.textContent = sec;
-                if (keepCurrent && sec === currentVal) opt.selected = true;
-                sectionEl.appendChild(opt);
-            });
-        }
-
-        function updateSections(gradeSelect) {
-            const account = gradeSelect.getAttribute('data-account');
-            const selectedGrade = gradeSelect.value;
-            populateSections(account, selectedGrade, false);
-        }
-
-        /* On page load: fill sections for students whose grade is pre-selected */
-        document.querySelectorAll('.grade-select').forEach((gradeSelect) => {
-            const account = gradeSelect.getAttribute('data-account');
-            const selectedGrade = gradeSelect.value;
-            if (selectedGrade) {
-                populateSections(account, selectedGrade, false);
-            }
-        });
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
         /* ── ENROLLMENT TOGGLE MODAL ── */
         let currentToggleAction = '';
         let isOriginalStateOpen = <?php echo $enrollmentOpen ? 'true' : 'false'; ?>;
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const switchEl = document.getElementById('enrollmentSwitch');
         const labelText = document.getElementById('toggleLabelText');
 
@@ -1392,68 +1501,175 @@ $adminDisplayName = trim(
             setTimeout(() => window.location.reload(), 1000);
         }
 
-        /* ── ENROLL STUDENT MODAL ── */
-        let pendingEnrollAccount = '';
-        let pendingEnrollName = '';
+        /* ── CAMERA MODAL ── */
+        let cameraStream = null;
+        let cameraAccount = '';
+        let cameraFullName = '';
+        let cameraGrade = '';
+        let cameraSection = '';
+        let capturedDataUrl = '';
 
-        function openEnrollModal(accountNumber, fullName) {
-            const gradeEl = document.getElementById('grade_' + accountNumber);
-            const sectionEl = document.getElementById('section_' + accountNumber);
+        const cameraModal = document.getElementById('cameraModal');
+        const cameraBox = document.getElementById('cameraBox');
+        const cameraVideo = document.getElementById('cameraVideo');
+        const cameraCanvas = document.getElementById('cameraCanvas');
+        const capturedPreview = document.getElementById('capturedPreview');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const approveBtn = document.getElementById('approveBtn');
+        const cameraContactInput = document.getElementById('cameraContactInput');
+        const cameraStatus = document.getElementById('cameraStatus');
+        const cameraStudentInfo = document.getElementById('cameraStudentInfo');
 
-            const gradeLevel = gradeEl ? gradeEl.value : '';
-            const section = sectionEl ? sectionEl.value : '';
-
-            if (!gradeLevel) {
-                alert('Please select a grade level (7–12).');
-                return;
-            }
-            if (!section) {
-                alert('Please select a section.');
-                return;
-            }
-
-            pendingEnrollAccount = accountNumber;
-            pendingEnrollName = fullName || 'this student';
-
-            document.getElementById('enrollStudentName').textContent = pendingEnrollName;
-            document.getElementById('enrollSummary').textContent = 'Grade ' + gradeLevel + ' - ' + section;
-
-            document.getElementById('enrollModal').classList.add('open');
+        function setCameraStatus(msg, type) {
+            cameraStatus.textContent = msg || '';
+            cameraStatus.className = 'camera-status' + (type ? ' ' + type : '');
         }
 
-        function closeEnrollModal() {
-            document.getElementById('enrollModal').classList.remove('open');
-            pendingEnrollAccount = '';
-            pendingEnrollName = '';
+        async function startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setCameraStatus('Camera is not supported in this browser.', 'error');
+                cameraPlaceholder.style.display = 'grid';
+                cameraPlaceholder.innerHTML = '<div><i class="fas fa-triangle-exclamation"></i>Camera not supported</div>';
+                return;
+            }
+
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 } },
+                    audio: false,
+                });
+                cameraVideo.srcObject = cameraStream;
+                cameraBox.classList.add('streaming');
+                setCameraStatus('');
+            } catch (err) {
+                console.error('Camera error:', err);
+                let msg = 'Unable to access camera.';
+                if (err && err.name === 'NotAllowedError') msg = 'Camera permission was denied. Please allow access and try again.';
+                else if (err && err.name === 'NotFoundError') msg = 'No camera device was found.';
+                setCameraStatus(msg, 'error');
+                cameraPlaceholder.innerHTML = '<div><i class="fas fa-triangle-exclamation"></i>' + msg + '</div>';
+            }
         }
 
-        function confirmEnrollStudent() {
-            if (!pendingEnrollAccount) {
-                closeEnrollModal();
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+            }
+            cameraVideo.srcObject = null;
+            cameraBox.classList.remove('streaming');
+        }
+
+        function openCameraModal(account, fullName, grade, section) {
+            cameraAccount = account || '';
+            cameraFullName = fullName || '';
+            cameraGrade = grade || '';
+            cameraSection = section || '';
+
+            const gradeTxt = cameraGrade ? ('Grade ' + cameraGrade) : 'Grade —';
+            const sectionTxt = cameraSection ? (' - ' + cameraSection) : '';
+
+            cameraStudentInfo.innerHTML =
+                '<strong>' + escapeHtml(cameraFullName) + '</strong>' +
+                ' &middot; Account #: ' + escapeHtml(cameraAccount) +
+                '<br><span style="color:#64748b">' + escapeHtml(gradeTxt + sectionTxt) + '</span>';
+
+            cameraContactInput.value = '';
+            capturedDataUrl = '';
+
+            cameraBox.classList.remove('captured');
+            capturedPreview.removeAttribute('src');
+            captureBtn.style.display = '';
+            retakeBtn.style.display = 'none';
+            approveBtn.disabled = false;
+            setCameraStatus('Starting camera…');
+
+            cameraModal.classList.add('open');
+            startCamera();
+        }
+
+        function closeCameraModal() {
+            stopCamera();
+            cameraModal.classList.remove('open');
+            cameraBox.classList.remove('captured');
+            capturedPreview.removeAttribute('src');
+            capturedDataUrl = '';
+            cameraContactInput.value = '';
+            setCameraStatus('');
+        }
+
+        function capturePhoto() {
+            if (!cameraStream) {
+                setCameraStatus('Camera is not active.', 'error');
                 return;
             }
 
-            const gradeEl = document.getElementById('grade_' + pendingEnrollAccount);
-            const sectionEl = document.getElementById('section_' + pendingEnrollAccount);
+            const w = cameraVideo.videoWidth || 640;
+            const h = cameraVideo.videoHeight || 480;
+            cameraCanvas.width = w;
+            cameraCanvas.height = h;
 
-            const gradeLevel = gradeEl ? gradeEl.value : '';
-            const section = sectionEl ? sectionEl.value : '';
+            const ctx = cameraCanvas.getContext('2d');
+            ctx.drawImage(cameraVideo, 0, 0, w, h);
 
-            if (!gradeLevel || !section) {
-                closeEnrollModal();
+            capturedDataUrl = cameraCanvas.toDataURL('image/jpeg', 0.85);
+
+            capturedPreview.src = capturedDataUrl;
+            cameraBox.classList.add('captured');
+
+            captureBtn.style.display = 'none';
+            retakeBtn.style.display = '';
+            setCameraStatus('Photo captured. Fill in contact number and approve.', 'success');
+        }
+
+        function retakePhoto() {
+            capturedDataUrl = '';
+            capturedPreview.removeAttribute('src');
+            cameraBox.classList.remove('captured');
+            captureBtn.style.display = '';
+            retakeBtn.style.display = 'none';
+            setCameraStatus('');
+        }
+
+        function approveStudent() {
+            if (!cameraAccount) {
+                setCameraStatus('Missing student account.', 'error');
                 return;
             }
+            if (!capturedDataUrl) {
+                setCameraStatus('Please capture a photo first.', 'error');
+                return;
+            }
+
+            const contact = (cameraContactInput.value || '').trim();
+            if (contact === '') {
+                setCameraStatus('Please enter a contact number.', 'error');
+                cameraContactInput.focus();
+                return;
+            }
+            if (!/^[0-9+\-\s()]{7,15}$/.test(contact)) {
+                setCameraStatus('Please enter a valid contact number.', 'error');
+                cameraContactInput.focus();
+                return;
+            }
+
+            approveBtn.disabled = true;
+            setCameraStatus('Submitting approval…');
 
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = '../API_ADMIN/enroll-students.php';
 
             const fields = {
-                action: 'enroll_student',
-                account_number: pendingEnrollAccount,
-                grade_level: gradeLevel,
-                section: section,
-                csrf_token: csrfToken
+                action: 'approve_with_capture',
+                account_number: cameraAccount,
+                contact_number: contact,
+                grade_level: cameraGrade,
+                section: cameraSection,
+                photo_data: capturedDataUrl,
+                csrf_token: csrfToken,
             };
 
             for (const [name, value] of Object.entries(fields)) {
@@ -1468,13 +1684,22 @@ $adminDisplayName = trim(
             form.submit();
         }
 
-        document.getElementById('enrollModal').addEventListener('click', function (e) {
-            if (e.target === this) closeEnrollModal();
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        cameraModal.addEventListener('click', function (e) {
+            if (e.target === this) closeCameraModal();
         });
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (document.getElementById('enrollModal').classList.contains('open')) closeEnrollModal();
+                if (cameraModal.classList.contains('open')) closeCameraModal();
                 if (document.getElementById('enrollmentModal').classList.contains('open')) closeEnrollmentModal();
             }
         });

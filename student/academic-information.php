@@ -53,14 +53,6 @@ function buildFullName(string $first, string $middle, string $last): string
     return implode(' ', $parts);
 }
 
-/**
- * Resolve teacher name from a row that has teacher_first/teacher_middle/teacher_last
- * (from the LEFT JOIN on teachers) plus adviser account number.
- *
- * Priority:
- *   1. Full name from teachers table (first + middle + last)
- *   2. The adviser account number (last resort — means the JOIN failed)
- */
 function resolveTeacherNameFromJoin(array $row): string
 {
     $name = buildFullName(
@@ -76,10 +68,6 @@ function resolveTeacherNameFromJoin(array $row): string
     return trim((string) ($row['adviser'] ?? ''));
 }
 
-/**
- * Fetch a teacher's full name by account number from the teachers table.
- * Returns '' if not found.
- */
 function fetchTeacherNameByAccount(PDO $pdo, string $account): string
 {
     $account = trim($account);
@@ -203,10 +191,11 @@ if ($user) {
 }
 
 /* ------------------------------------------------------------
-   ENROLLMENT STATUS
+   ENROLLMENT STATUS (student level)
    ------------------------------------------------------------ */
 $enrollmentStatus = $user ? strtolower(trim((string) ($user['enrollment_status'] ?? 'pending'))) : 'pending';
 $enrolledThisYear = in_array($enrollmentStatus, ['enrolled', 'active'], true);
+$isPendingStudent = ($enrollmentStatus === 'pending');
 
 /* ------------------------------------------------------------
    FETCH ENROLLMENT RECORD
@@ -253,7 +242,7 @@ if ($isLoggedIn && $user) {
 }
 
 /* ------------------------------------------------------------
-   NOT ENROLLED → redirect
+   NO RECORD AT ALL → redirect to the enrollment form
    ------------------------------------------------------------ */
 if ($isLoggedIn && $user && !$enrollmentRecord) {
     header('Location: student-enrollment.php');
@@ -272,6 +261,17 @@ if ($enrollmentRecord) {
 if ($effectiveGrade === '' && !empty($user['grade_level'])) {
     $effectiveGrade = trim((string) $user['grade_level']);
 }
+
+/* ------------------------------------------------------------
+   PENDING STATE
+   - enrolled_students.status == 'Pending'
+   - OR students.enrollment_status == 'Pending'
+   ------------------------------------------------------------ */
+$recordStatusRaw = $enrollmentRecord
+    ? strtolower(trim((string) ($enrollmentRecord['status'] ?? '')))
+    : '';
+$isPendingRecord = ($recordStatusRaw === 'pending');
+$isPending = ($isPendingRecord || $isPendingStudent);
 
 /* ------------------------------------------------------------
    DETECT ASSIGNMENT TABLE
@@ -680,6 +680,72 @@ unset($_SESSION['flash']['just_enrolled']);
             margin: 30px 0 60px;
         }
 
+        /* CHANGED: Welcome card (Pending / New Student / Transferee) */
+        .welcome-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 14px;
+            padding: 40px 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            background: linear-gradient(135deg, #f8fafc, #eef2ff);
+        }
+
+        .welcome-card .welcome-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 30px;
+            margin-bottom: 4px;
+        }
+
+        .welcome-card h2 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .welcome-card p {
+            font-size: 15px;
+            color: var(--muted);
+            max-width: 540px;
+            line-height: 1.65;
+        }
+
+        .welcome-card p strong {
+            color: var(--text);
+        }
+
+        .welcome-card .account-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            background: #fff;
+            border: 1px solid var(--line);
+            font-size: 14px;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .welcome-card .account-box i {
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        .welcome-card .account-box b {
+            color: var(--primary-dark);
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            letter-spacing: .02em;
+        }
+
         /* ENROLLMENT DETAILS */
         .enrolled-summary {
             padding: 24px 20px;
@@ -737,6 +803,32 @@ unset($_SESSION['flash']['just_enrolled']);
             color: #94a3b8;
             font-weight: 500;
             font-style: italic;
+        }
+
+        /* Status pill */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 12px;
+            border-radius: 999px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12.5px;
+            font-weight: 700;
+            letter-spacing: .02em;
+            line-height: 1.6;
+        }
+
+        .status-pill.pending {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .status-pill.enrolled {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
 
         /* SUBJECTS */
@@ -1057,6 +1149,24 @@ unset($_SESSION['flash']['just_enrolled']);
                 column-gap: 6px;
             }
 
+            .welcome-card {
+                padding: 30px 18px;
+            }
+
+            .welcome-card .welcome-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 26px;
+            }
+
+            .welcome-card h2 {
+                font-size: 19px;
+            }
+
+            .welcome-card p {
+                font-size: 14px;
+            }
+
             .spinner {
                 width: 52px;
                 height: 52px;
@@ -1155,156 +1265,181 @@ unset($_SESSION['flash']['just_enrolled']);
 
     <main class="container">
         <?php if ($isLoggedIn && $user): ?>
-            <section class="panel">
-
-                <!-- ENROLLMENT DETAILS -->
-                <div class="enrolled-summary">
-                    <h3>Enrollment Details</h3>
-
-                    <div class="summary-row">
-                        <span class="label">Account Number</span>
-                        <span class="dash">-</span>
-                        <span class="value"><?php echo htmlspecialchars($user['account_number'] ?? '—'); ?></span>
-                    </div>
-
-                    <div class="summary-row">
-                        <span class="label">Grade Level</span>
-                        <span class="dash">-</span>
-                        <span
-                            class="value"><?php echo htmlspecialchars($effectiveGrade !== '' ? $effectiveGrade : ($user['grade_level'] ?? '—')); ?></span>
-                    </div>
-
-                    <div class="summary-row">
-                        <span class="label">Section</span>
-                        <span class="dash">-</span>
-                        <span
-                            class="value"><?php echo htmlspecialchars($effectiveSection !== '' ? $effectiveSection : '—'); ?></span>
-                    </div>
-
-                    <div class="summary-row">
-                        <span class="label">Adviser</span>
-                        <span class="dash">-</span>
-                        <span class="value <?php echo $adviserName === '' ? 'muted-value' : ''; ?>">
-                            <?php
-                            if ($adviserName !== '') {
-                                echo htmlspecialchars($adviserName);
-                            } elseif ($adviserFetchErr !== null) {
-                                echo 'Unable to load';
-                            } else {
-                                echo 'Not assigned yet';
-                            }
-                            ?>
-                        </span>
-                    </div>
-
-                    <div class="summary-row">
-                        <span class="label">Academic Year</span>
-                        <span class="dash">-</span>
-                        <span
-                            class="value"><?php echo htmlspecialchars($enrollmentRecord['academic_year'] ?? $currentYear); ?></span>
-                    </div>
-
-                    <div class="summary-row">
-                        <span class="label">Status</span>
-                        <span class="dash">-</span>
-                        <span class="value"><?php echo htmlspecialchars($displayStatus ?: 'Enrolled'); ?></span>
-                    </div>
-                </div>
-
-                <!-- MY SUBJECTS -->
-                <div class="subjects-section">
-                    <div class="subjects-head">
-                        <h3>
-                            <i class="fas fa-book-open"></i>
-                            My Subjects
-                        </h3>
-                        <span class="subjects-count">
-                            <?php echo count($studentSubjects); ?>
-                            subject<?php echo count($studentSubjects) === 1 ? '' : 's'; ?>
-                        </span>
-                    </div>
-
-                    <?php if (empty($studentSubjects)): ?>
-                        <div class="empty-subjects">
-                            <i class="fas fa-inbox"></i>
-                            <p>No subjects have been assigned yet. Please check back later.</p>
-                            <?php if ($subjectsFetchErr !== null): ?>
-                                <span class="debug">Query error: <?php echo htmlspecialchars($subjectsFetchErr); ?></span>
-                            <?php elseif ($assignmentTable === null): ?>
-                                <span class="debug">No assignment table found (`assigned_teachers` / `assinged_teachers`).</span>
-                            <?php elseif ($effectiveGrade === '' || $effectiveSection === ''): ?>
-                                <span class="debug">Missing grade_level or section for this student.</span>
-                            <?php endif; ?>
+            <?php if ($isPending): ?>
+                <?php /* CHANGED: Pending state → show welcome card only, hide enrollment details + subjects */ ?>
+                <section class="panel">
+                    <div class="welcome-card is-closed">
+                        <div class="welcome-icon"
+                            style="color: #b45309; background: #fef3c7; box-shadow: 0 12px 26px -14px rgba(245, 158, 11, 0.45);">
+                            <i class="fas fa-hourglass-half"></i>
                         </div>
-                    <?php else: ?>
-                        <div class="subjects-wrap">
-                            <table class="subjects">
-                                <thead>
-                                    <tr>
-                                        <th>Subject</th>
-                                        <th>Adviser</th>
-                                        <th>Schedule</th>
-                                        <th>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($studentSubjects as $i => $s): ?>
-                                        <?php
-                                        /* Teacher name via adviser → teachers lookup */
-                                        $teacherFullName = resolveTeacherNameFromJoin($s);
+                        <h2>Enrollment Pending — Visit the Registrar's Office</h2>
+                        <p>
+                            Your enrollment request has been submitted and is currently
+                            <strong>pending approval</strong>. To complete your enrollment,
+                            please proceed to the <strong>Registrar's Office</strong> and bring
+                            your required documents for verification and approval.
+                        </p>
+                        <div class="account-box">
+                            <i class="fas fa-id-card"></i>
+                            Account No. <b><?php echo htmlspecialchars($user['account_number']); ?></b>
+                        </div>
+                    </div>
+                </section>
+            <?php else: ?>
+                <section class="panel">
 
-                                        /* Days: "Monday,Wednesday,Friday" → "M, W, F" */
-                                        $daysRaw = trim((string) ($s['days'] ?? ''));
-                                        $daysList = $daysRaw !== '' ? array_map('trim', explode(',', $daysRaw)) : [];
-                                        $daysShort = [];
+                    <!-- ENROLLMENT DETAILS -->
+                    <div class="enrolled-summary">
+                        <h3>Enrollment Details</h3>
 
-                                        foreach ($daysList as $d) {
-                                            if ($d !== '') {
-                                                $daysShort[] = formatDayShort($d);
-                                            }
-                                        }
+                        <div class="summary-row">
+                            <span class="label">Account Number</span>
+                            <span class="dash">-</span>
+                            <span class="value"><?php echo htmlspecialchars($user['account_number'] ?? '—'); ?></span>
+                        </div>
 
-                                        $daysDisplay = implode(', ', $daysShort);
+                        <div class="summary-row">
+                            <span class="label">Grade Level</span>
+                            <span class="dash">-</span>
+                            <span
+                                class="value"><?php echo htmlspecialchars($effectiveGrade !== '' ? $effectiveGrade : ($user['grade_level'] ?? '—')); ?></span>
+                        </div>
 
-                                        /* Time: "14:30" → "2:30 PM" */
-                                        $startTime = trim((string) ($s['start_time'] ?? ''));
-                                        $endTime = trim((string) ($s['end_time'] ?? ''));
+                        <div class="summary-row">
+                            <span class="label">Section</span>
+                            <span class="dash">-</span>
+                            <span
+                                class="value"><?php echo htmlspecialchars($effectiveSection !== '' ? $effectiveSection : '—'); ?></span>
+                        </div>
 
-                                        $start12 = formatTime12h($startTime);
-                                        $end12 = formatTime12h($endTime);
+                        <div class="summary-row">
+                            <span class="label">Adviser</span>
+                            <span class="dash">-</span>
+                            <span class="value <?php echo $adviserName === '' ? 'muted-value' : ''; ?>">
+                                <?php
+                                if ($adviserName !== '') {
+                                    echo htmlspecialchars($adviserName);
+                                } elseif ($adviserFetchErr !== null) {
+                                    echo 'Unable to load';
+                                } else {
+                                    echo 'Not assigned yet';
+                                }
+                                ?>
+                            </span>
+                        </div>
 
-                                        $timeText = '';
-                                        if ($start12 !== '' || $end12 !== '') {
-                                            $timeText = $start12;
-                                            if ($start12 !== '' && $end12 !== '') {
-                                                $timeText .= ' – ';
-                                            }
-                                            $timeText .= $end12;
-                                        }
-                                        if ($timeText === '') {
-                                            $timeText = '—';
-                                        }
-                                        ?>
+                        <div class="summary-row">
+                            <span class="label">Academic Year</span>
+                            <span class="dash">-</span>
+                            <span
+                                class="value"><?php echo htmlspecialchars($enrollmentRecord['academic_year'] ?? $currentYear); ?></span>
+                        </div>
+
+                        <div class="summary-row">
+                            <span class="label">Status</span>
+                            <span class="dash">-</span>
+                            <span class="value">
+                                <span class="status-pill enrolled">
+                                    <i class="fas fa-circle-check"></i>
+                                    <?php echo htmlspecialchars($displayStatus ?: 'Enrolled'); ?>
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- MY SUBJECTS -->
+                    <div class="subjects-section">
+                        <div class="subjects-head">
+                            <h3>
+                                <i class="fas fa-book-open"></i>
+                                My Subjects
+                            </h3>
+                            <span class="subjects-count">
+                                <?php echo count($studentSubjects); ?>
+                                subject<?php echo count($studentSubjects) === 1 ? '' : 's'; ?>
+                            </span>
+                        </div>
+
+                        <?php if (empty($studentSubjects)): ?>
+                            <div class="empty-subjects">
+                                <i class="fas fa-inbox"></i>
+                                <p>No subjects have been assigned yet. Please check back later.</p>
+                                <?php if ($subjectsFetchErr !== null): ?>
+                                    <span class="debug">Query error: <?php echo htmlspecialchars($subjectsFetchErr); ?></span>
+                                <?php elseif ($assignmentTable === null): ?>
+                                    <span class="debug">No assignment table found (`assigned_teachers` / `assinged_teachers`).</span>
+                                <?php elseif ($effectiveGrade === '' || $effectiveSection === ''): ?>
+                                    <span class="debug">Missing grade_level or section for this student.</span>
+                                <?php endif; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="subjects-wrap">
+                                <table class="subjects">
+                                    <thead>
                                         <tr>
-                                            <td><?php echo htmlspecialchars($s['subject'] ?? '—'); ?></td>
-                                            <td title="<?php echo htmlspecialchars($teacherFullName); ?>">
-                                                <?php echo htmlspecialchars($teacherFullName); ?>
-                                            </td>
-                                            <td title="<?php echo htmlspecialchars($daysRaw !== '' ? $daysRaw : '—'); ?>">
-                                                <?php echo htmlspecialchars($daysDisplay !== '' ? $daysDisplay : '—'); ?>
-                                            </td>
-                                            <td title="<?php echo htmlspecialchars($timeText); ?>">
-                                                <?php echo htmlspecialchars($timeText); ?>
-                                            </td>
+                                            <th>Subject</th>
+                                            <th>Adviser</th>
+                                            <th>Schedule</th>
+                                            <th>Time</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($studentSubjects as $i => $s): ?>
+                                            <?php
+                                            $teacherFullName = resolveTeacherNameFromJoin($s);
 
-            </section>
+                                            $daysRaw = trim((string) ($s['days'] ?? ''));
+                                            $daysList = $daysRaw !== '' ? array_map('trim', explode(',', $daysRaw)) : [];
+                                            $daysShort = [];
+
+                                            foreach ($daysList as $d) {
+                                                if ($d !== '') {
+                                                    $daysShort[] = formatDayShort($d);
+                                                }
+                                            }
+
+                                            $daysDisplay = implode(', ', $daysShort);
+
+                                            $startTime = trim((string) ($s['start_time'] ?? ''));
+                                            $endTime = trim((string) ($s['end_time'] ?? ''));
+
+                                            $start12 = formatTime12h($startTime);
+                                            $end12 = formatTime12h($endTime);
+
+                                            $timeText = '';
+                                            if ($start12 !== '' || $end12 !== '') {
+                                                $timeText = $start12;
+                                                if ($start12 !== '' && $end12 !== '') {
+                                                    $timeText .= ' – ';
+                                                }
+                                                $timeText .= $end12;
+                                            }
+                                            if ($timeText === '') {
+                                                $timeText = '—';
+                                            }
+                                            ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($s['subject'] ?? '—'); ?></td>
+                                                <td title="<?php echo htmlspecialchars($teacherFullName); ?>">
+                                                    <?php echo htmlspecialchars($teacherFullName); ?>
+                                                </td>
+                                                <td title="<?php echo htmlspecialchars($daysRaw !== '' ? $daysRaw : '—'); ?>">
+                                                    <?php echo htmlspecialchars($daysDisplay !== '' ? $daysDisplay : '—'); ?>
+                                                </td>
+                                                <td title="<?php echo htmlspecialchars($timeText); ?>">
+                                                    <?php echo htmlspecialchars($timeText); ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                </section>
+            <?php endif; ?>
         <?php endif; ?>
     </main>
 

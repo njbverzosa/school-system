@@ -125,12 +125,10 @@ if ($userType === 'student') {
     $enrollmentStatus = strtolower(trim((string) ($foundUser['enrollment_status'] ?? 'not enrolled')));
     $studentType = strtoupper(trim((string) ($foundUser['student_type'] ?? '')));
 
-    /* Old Student + Enrolled  → academic portal
-       Everyone else (N/T, or O but not enrolled) → enrollment form */
-    if (in_array($studentType, ['N', 'T'], true) && $enrollmentStatus === 'Enrolled') {
+    if ($enrollmentStatus === 'Not Enrolled') {
         $redirect = 'student/academic-information.php';
     } else {
-        $redirect = 'student/academic-information.php';
+        $redirect = 'student/student-enrollment.php';
     }
 } elseif ($userType === 'admin') {
     $redirect = 'admin/dashboard.php';
