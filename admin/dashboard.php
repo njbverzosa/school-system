@@ -164,7 +164,6 @@ try {
             s.student_type,
             s.registered_date,
             s.enrollment_status,
-            s.lrn,
             s.student_lrn,
             s.profile_account,
             e.section        AS pending_section,
@@ -195,34 +194,34 @@ try {
 }
 
 /* ------------------------------------------------------------
-   CHANGED: Enrolled Students — ALL enrolled rows
-   - joins students for fullname, profile_account, student_lrn (fallback lrn)
-   - pulls grade_level + section from enrolled_students
-   - includes any status (Active, Pending, etc.)
+   CHANGED: All Students
+   - starts from students (so ALL students appear)
+   - LEFT JOIN enrolled_students for grade_level + section
+   - pulls student_lrn + profile_account from students
    ------------------------------------------------------------ */
 $enrolledStudents = [];
 try {
     $stmt = $pdo->query("
         SELECT
-            e.account_number,
-            e.grade_level,
-            e.section,
-            e.academic_year,
-            e.status,
+            s.account_number,
             s.first_name,
             s.middle_name,
             s.surname,
-            s.contact_number,
-            s.lrn,
             s.student_lrn,
-            s.profile_account
-        FROM enrolled_students e
-        LEFT JOIN students s ON s.account_number = e.account_number
+            s.profile_account,
+            s.enrollment_status,
+            e.grade_level,
+            e.section,
+            e.academic_year,
+            e.status AS enrollment_record_status
+        FROM students s
+        LEFT JOIN enrolled_students e
+          ON e.account_number = s.account_number
         ORDER BY s.surname, s.first_name, e.id DESC
     ");
     $enrolledStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    error_log("enrolled students fetch failed: " . $e->getMessage());
+    error_log("all students fetch failed: " . $e->getMessage());
 }
 
 $gradeFilter = isset($_GET['grade']) ? trim((string) $_GET['grade']) : 'all';
@@ -1270,10 +1269,7 @@ function studentTypeBadgeClass(string $t): string
                                 $sType    = (string) ($s['student_type'] ?? '');
                                 $isPendingRow = (strtolower((string) ($s['enrollment_record_status'] ?? '')) === 'pending');
 
-                                $sLrn = trim((string) ($s['lrn'] ?? ''));
-                                if ($sLrn === '') {
-                                    $sLrn = trim((string) ($s['student_lrn'] ?? ''));
-                                }
+                                $sLrn = trim((string) ($s['student_lrn'] ?? ''));
 
                                 $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
                                 $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
@@ -1337,13 +1333,13 @@ function studentTypeBadgeClass(string $t): string
             </section>
         <?php endif; ?>
 
-        <?php /* CHANGED: Enrolled Students — all enrolled_students rows with student data */ ?>
+        <?php /* CHANGED: All Students — starts from students, LEFT JOIN enrolled_students */ ?>
         <?php if (!empty($enrolledStudents)): ?>
             <section class="section">
                 <div class="section-head">
                     <div>
-                        <h2>Enrolled Students</h2>
-                        <p>All students with records in the enrolled_students table.</p>
+                        <h2>All Students</h2>
+                        <p>Every student in the system, with grade level and section from enrolled_students when available.</p>
                     </div>
                     <div>
                         <form method="GET" action="dashboard.php" id="gradeFilterForm">
@@ -1363,7 +1359,7 @@ function studentTypeBadgeClass(string $t): string
                 <?php if (empty($filteredEnrolledStudents)): ?>
                     <div class="filter-hint">
                         <i class="fas fa-user-slash" style="margin-right: 6px;"></i>
-                        No enrolled students found<?php echo $isAllGrades ? '' : ' for Grade ' . htmlspecialchars($gradeFilter); ?>.
+                        No students found<?php echo $isAllGrades ? '' : ' for Grade ' . htmlspecialchars($gradeFilter); ?>.
                     </div>
                 <?php else: ?>
                     <div class="table-wrap">
@@ -1389,16 +1385,22 @@ function studentTypeBadgeClass(string $t): string
                                         ($s['surname'] ?? '')
                                     );
                                     $sAccount = (string) ($s['account_number'] ?? '');
-                                    $sStatus  = trim((string) ($s['status'] ?? ''));
 
-                                    /* student_lrn first, fall back to lrn */
                                     $sLrn = trim((string) ($s['student_lrn'] ?? ''));
-                                    if ($sLrn === '') {
-                                        $sLrn = trim((string) ($s['lrn'] ?? ''));
-                                    }
 
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
                                     $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
+
+                                    /* Enrollment status: prefer enrolled_students.status, fall back to students.enrollment_status */
+                                    $sStatus = trim((string) ($s['enrollment_record_status'] ?? ''));
+                                    if ($sStatus === '') {
+                                        $sStatus = trim((string) ($s['enrollment_status'] ?? ''));
+                                    }
+
+                                    /* Grade level: from enrolled_students; empty if no row */
+                                    $sGradeLevel = $s['grade_level'] ?? '';
+                                    $sSection    = $s['section'] ?? '';
+                                    $sAcademic   = $s['academic_year'] ?? '';
                                     ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
@@ -1408,9 +1410,9 @@ function studentTypeBadgeClass(string $t): string
                                             </div>
                                         </td>
                                         <td><?php echo htmlspecialchars($sLrn !== '' ? $sLrn : '—'); ?></td>
-                                        <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
-                                        <td><?php echo htmlspecialchars($s['section'] ?? '—'); ?></td>
-                                        <td><?php echo htmlspecialchars($s['academic_year'] ?? '—'); ?></td>
+                                        <td><?php echo $sGradeLevel !== '' ? ('Grade ' . htmlspecialchars((string) $sGradeLevel)) : '—'; ?></td>
+                                        <td><?php echo htmlspecialchars($sSection !== '' ? (string) $sSection : '—'); ?></td>
+                                        <td><?php echo htmlspecialchars($sAcademic !== '' ? (string) $sAcademic : '—'); ?></td>
                                         <td>
                                             <?php if (strcasecmp($sStatus, 'Active') === 0): ?>
                                                 <span class="type-badge type-n"><?php echo htmlspecialchars($sStatus); ?></span>
