@@ -828,7 +828,7 @@ unset($_SESSION['flash']['just_enrolled']);
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #5ad7e7;           /* Facebook blue */
+            background: #5ad7e7;
             color: #ffffff;
             font-size: 10px;
             flex-shrink: 0;
@@ -1316,6 +1316,12 @@ unset($_SESSION['flash']['just_enrolled']);
                     <!-- ENROLLMENT DETAILS -->
                     <div class="enrolled-summary">
                         <h3>Enrollment Details</h3>
+
+                        <div class="summary-row">
+                            <span class="label">Student Name</span>
+                            <span class="dash">-</span>
+                            <span class="value"><?php echo htmlspecialchars($displayName !== '' ? $displayName : '—'); ?></span>
+                        </div>
 
                         <div class="summary-row">
                             <span class="label">Account Number</span>
