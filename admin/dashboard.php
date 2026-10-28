@@ -1484,7 +1484,7 @@ function studentTypeBadgeClass(string $t): string
 
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
                                     $sPhotoUrl  = $sPhotoFile !== ''
-                                        ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/' . $sPhotoFile
+                                        ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/' . $sPhotoFile
                                         : '';
 
                                     $sStatus = trim((string) ($s['enrollment_record_status'] ?? 'Active'));
