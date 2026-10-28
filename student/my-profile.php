@@ -775,13 +775,13 @@ if ($user) {
                         <i class="fas fa-bars"></i>
                     </button>
 
-                     <div class="nav-dropdown" id="navDropdown" role="menu">
+                    <div class="nav-dropdown" id="navDropdown" role="menu">
                         <div class="nav-dropdown-head">MENU</div>
 
                         <a href="academic-information.php" role="menuitem">
                             <i class="fas fa-calendar-days"></i> Subject Schedule
                         </a>
-                        
+
                         <a href="my-attendance.php" role="menuitem">
                             <i class="fas fa-clipboard-user"></i> My Attendance
                         </a>
@@ -814,10 +814,22 @@ if ($user) {
                     <div class="student-avatar">
                         <?php
                         $profileFile = trim((string) ($user['profile_account'] ?? ''));
-                        $hasProfile = $profileFile !== '' && strcasecmp($profileFile, 'profile-image.jpg') !== 0;
+
+                        // Has a real filename (not the default placeholder)?
+                        $hasProfile = $profileFile !== ''
+                            && strcasecmp($profileFile, 'profile-image.jpg') !== 0;
+
+                        // Absolute filesystem path to check the file exists on the server
+                        $absProfile = __DIR__ . '/../Students_Profile/' . basename($profileFile);
+                        $fileExists = $hasProfile && is_file($absProfile);
+
+                        // Public URL (adjust domain/path if the folder is at the web root)
+                        $profileUrl = $fileExists
+                            ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/' . rawurlencode($profileFile)
+                            : '';
                         ?>
-                        <?php if ($hasProfile): ?>
-                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/<?php echo htmlspecialchars($profileFile); ?>"
+                        <?php if ($profileUrl !== ''): ?>
+                            <img src="<?php echo htmlspecialchars($profileUrl); ?>"
                                 alt="<?php echo htmlspecialchars($displayName); ?>"
                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
                             <div class="avatar-fallback" style="display:none;"><i class="fas fa-user"></i></div>
