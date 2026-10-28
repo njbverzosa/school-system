@@ -152,7 +152,7 @@ function saveStudentProfilePhoto(string $account, string $jpegBytes): ?string
         return null;
     }
 
-    $absDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Students_Profile';
+    $absDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Students_Profile/';
 
     if (!is_dir($absDir)) {
         if (!@mkdir($absDir, 0775, true) && !is_dir($absDir)) {
