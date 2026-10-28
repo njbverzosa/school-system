@@ -1,16 +1,16 @@
 <?php
 // config.php – Place this file OUTSIDE the public web root.
 
-$host = 'localhost'; // This is always the hostname for Hostinger shared hosting
-$dbname = 'u408983097_db_Bv9RVNRg';
-$username = 'u408983097_usr_Bv9RVNRg';
-$password = 'Nj_Verzosa@24';
+// $host = 'localhost'; // This is always the hostname for Hostinger shared hosting
+// $dbname = 'u408983097_db_Bv9RVNRg';
+// $username = 'u408983097_usr_Bv9RVNRg';
+// $password = 'Nj_Verzosa@24';
  
 
-// $host = 'localhost'; // This is always the hostname for Hostinger shared hosting
-// $dbname = 'school_system';
-// $username = 'root';
-// $password = ''; // Enter the password you set for this database user
+$host = 'localhost'; // This is always the hostname for Hostinger shared hosting
+$dbname = 'school_system';
+$username = 'root';
+$password = ''; // Enter the password you set for this database user
 
 
 try {
