@@ -1313,7 +1313,6 @@ function studentTypeBadgeClass(string $t): string
                                 <th>Grade Level</th>
                                 <th>Section</th>
                                 <th>Type</th>
-                                <th>ID Picture</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -1337,8 +1336,6 @@ function studentTypeBadgeClass(string $t): string
 
                                 /* LRN + photo from students */
                                 $sLrn = trim((string) ($s['student_lrn'] ?? ''));
-                                $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
-                                $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
                                 ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
@@ -1360,19 +1357,7 @@ function studentTypeBadgeClass(string $t): string
                                             <?php echo htmlspecialchars(studentTypeLabel($sType)); ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <?php if ($sPhotoUrl !== ''): ?>
-                                            <a href="javascript:void(0);" class="id-photo-link" title="View ID picture"
-                                               onclick="openLightbox('<?php echo htmlspecialchars($sPhotoUrl, ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($sFullName ?: $sAccount), ENT_QUOTES); ?>')">
-                                                <img src="<?php echo htmlspecialchars($sPhotoUrl); ?>"
-                                                     alt="ID picture of <?php echo htmlspecialchars($sFullName ?: $sAccount); ?>"
-                                                     class="id-photo-thumb"
-                                                     onerror="this.parentElement.innerHTML='<span class=&quot;id-photo-missing&quot;>No photo</span>';">
-                                            </a>
-                                        <?php else: ?>
-                                            <span class="id-photo-missing">No photo</span>
-                                        <?php endif; ?>
-                                    </td>
+                                   
                                     <td>
                                         <button type="button" class="btn btn-primary btn-mini"
                                             onclick="openCameraModal(
@@ -1447,7 +1432,7 @@ function studentTypeBadgeClass(string $t): string
                                     $sLrn = trim((string) ($s['student_lrn'] ?? ''));
 
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
-                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Student_Profile/' . $sPhotoFile : '';
+                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/' . $sPhotoFile : '';
 
                                     /* Always Active because of WHERE clause, but guard anyway */
                                     $sStatus = trim((string) ($s['enrollment_record_status'] ?? 'Active'));
