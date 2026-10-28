@@ -144,7 +144,6 @@ try {
 
 /* ------------------------------------------------------------
    Students for Enrollment — single combined list
-   (includes LRN + profile photo from students via LEFT JOIN)
    ------------------------------------------------------------ */
 $studentsForEnrollment = [];
 try {
@@ -196,7 +195,10 @@ try {
 }
 
 /* ------------------------------------------------------------
-   Enrolled Students — Active only (includes LRN + profile photo)
+   CHANGED: Enrolled Students — ALL enrolled rows
+   - joins students for fullname, profile_account, student_lrn (fallback lrn)
+   - pulls grade_level + section from enrolled_students
+   - includes any status (Active, Pending, etc.)
    ------------------------------------------------------------ */
 $enrolledStudents = [];
 try {
@@ -206,6 +208,7 @@ try {
             e.grade_level,
             e.section,
             e.academic_year,
+            e.status,
             s.first_name,
             s.middle_name,
             s.surname,
@@ -215,8 +218,7 @@ try {
             s.profile_account
         FROM enrolled_students e
         LEFT JOIN students s ON s.account_number = e.account_number
-        WHERE e.status = 'Active'
-        ORDER BY s.surname, s.first_name
+        ORDER BY s.surname, s.first_name, e.id DESC
     ");
     $enrolledStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -1232,7 +1234,6 @@ function studentTypeBadgeClass(string $t): string
             </div>
         </section>
 
-        <?php /* Students for Enrollment — now with LRN + ID Picture */ ?>
         <?php if (!empty($studentsForEnrollment)): ?>
             <section class="section">
                 <div class="section-head">
@@ -1269,13 +1270,11 @@ function studentTypeBadgeClass(string $t): string
                                 $sType    = (string) ($s['student_type'] ?? '');
                                 $isPendingRow = (strtolower((string) ($s['enrollment_record_status'] ?? '')) === 'pending');
 
-                                /* Prefer lrn; fall back to student_lrn */
                                 $sLrn = trim((string) ($s['lrn'] ?? ''));
                                 if ($sLrn === '') {
                                     $sLrn = trim((string) ($s['student_lrn'] ?? ''));
                                 }
 
-                                /* profile_account stores the filename only */
                                 $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
                                 $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
                                 ?>
@@ -1338,11 +1337,13 @@ function studentTypeBadgeClass(string $t): string
             </section>
         <?php endif; ?>
 
+        <?php /* CHANGED: Enrolled Students — all enrolled_students rows with student data */ ?>
         <?php if (!empty($enrolledStudents)): ?>
             <section class="section">
                 <div class="section-head">
                     <div>
                         <h2>Enrolled Students</h2>
+                        <p>All students with records in the enrolled_students table.</p>
                     </div>
                     <div>
                         <form method="GET" action="dashboard.php" id="gradeFilterForm">
@@ -1375,6 +1376,7 @@ function studentTypeBadgeClass(string $t): string
                                     <th>Grade Level</th>
                                     <th>Section</th>
                                     <th>Academic Year</th>
+                                    <th>Status</th>
                                     <th>ID Picture</th>
                                 </tr>
                             </thead>
@@ -1386,16 +1388,15 @@ function studentTypeBadgeClass(string $t): string
                                         ($s['middle_name'] ?? '') . ' ' .
                                         ($s['surname'] ?? '')
                                     );
-                                    $sContact = trim((string) ($s['contact_number'] ?? ''));
                                     $sAccount = (string) ($s['account_number'] ?? '');
+                                    $sStatus  = trim((string) ($s['status'] ?? ''));
 
-                                    /* Prefer lrn; fall back to student_lrn */
-                                    $sLrn = trim((string) ($s['lrn'] ?? ''));
+                                    /* student_lrn first, fall back to lrn */
+                                    $sLrn = trim((string) ($s['student_lrn'] ?? ''));
                                     if ($sLrn === '') {
-                                        $sLrn = trim((string) ($s['student_lrn'] ?? ''));
+                                        $sLrn = trim((string) ($s['lrn'] ?? ''));
                                     }
 
-                                    /* profile_account stores the filename only */
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
                                     $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
                                     ?>
@@ -1404,15 +1405,23 @@ function studentTypeBadgeClass(string $t): string
                                         <td>
                                             <div class="name-block">
                                                 <span><?php echo htmlspecialchars($sFullName ?: '—'); ?></span>
-                                                <?php if ($sContact !== ''): ?>
-                                                    <span class="contact-sub"><?php echo htmlspecialchars($sContact); ?></span>
-                                                <?php endif; ?>
                                             </div>
                                         </td>
                                         <td><?php echo htmlspecialchars($sLrn !== '' ? $sLrn : '—'); ?></td>
                                         <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
                                         <td><?php echo htmlspecialchars($s['section'] ?? '—'); ?></td>
                                         <td><?php echo htmlspecialchars($s['academic_year'] ?? '—'); ?></td>
+                                        <td>
+                                            <?php if (strcasecmp($sStatus, 'Active') === 0): ?>
+                                                <span class="type-badge type-n"><?php echo htmlspecialchars($sStatus); ?></span>
+                                            <?php elseif (strcasecmp($sStatus, 'Pending') === 0): ?>
+                                                <span class="pending-pill">
+                                                    <i class="fas fa-hourglass-half"></i> <?php echo htmlspecialchars($sStatus); ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="type-badge type-default"><?php echo htmlspecialchars($sStatus ?: '—'); ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <?php if ($sPhotoUrl !== ''): ?>
                                                 <a href="<?php echo htmlspecialchars($sPhotoUrl); ?>" target="_blank" rel="noopener"
@@ -1485,7 +1494,6 @@ function studentTypeBadgeClass(string $t): string
                 </button>
             </div>
 
-            <?php /* Only LRN input (12 digits) */ ?>
             <div class="field-group">
                 <label class="field-label" for="cameraLrnInput">LRN (12 digits)</label>
                 <input type="text" class="field-input" id="cameraLrnInput"
@@ -1752,7 +1760,6 @@ function studentTypeBadgeClass(string $t): string
                 return;
             }
 
-            /* LRN must be exactly 12 digits */
             const lrn = (cameraLrnInput.value || '').trim();
             if (!/^\d{12}$/.test(lrn)) {
                 setCameraStatus('LRN must be exactly 12 digits (numbers only).', 'error');
