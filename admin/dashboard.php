@@ -774,6 +774,17 @@ function studentTypeBadgeClass(string $t): string
             transform: scale(.94);
         }
 
+        /* Final Enrollment search bar */
+        .final-search-input {
+            width: 320px;
+            min-width: 220px;
+            padding: 9px 12px;
+            font-size: 13.5px;
+            font-weight: 500;
+            border-radius: 8px;
+            text-transform: none;
+        }
+
         .btn {
             display: inline-flex;
             align-items: center;
@@ -1191,6 +1202,10 @@ function studentTypeBadgeClass(string $t): string
             .lightbox-img {
                 padding: 4px;
             }
+            .final-search-input {
+                width: 100%;
+                min-width: 0;
+            }
         }
 
         @media (max-width: 400px) {
@@ -1301,9 +1316,18 @@ function studentTypeBadgeClass(string $t): string
                         <h2>Final Enrollment</h2>
                         <p>Take picture, update LRN, approve enrollment.</p>
                     </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" class="field-input final-search-input" id="finalSearchInput"
+                               placeholder="Search by Account #, Name, LRN, Grade, Section, Sex, Type…"
+                               autocomplete="off" oninput="filterFinalTable(this.value)">
+                        <button type="button" class="btn btn-cancel btn-mini" id="finalSearchClearBtn"
+                                onclick="clearFinalSearch()" style="display:none;">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
                 </div>
                 <div class="table-wrap">
-                    <table class="data">
+                    <table class="data" id="finalEnrollmentTable">
                         <thead>
                             <tr>
                                 <th>Account #</th>
@@ -1337,7 +1361,16 @@ function studentTypeBadgeClass(string $t): string
                                 /* LRN + photo from students */
                                 $sLrn = trim((string) ($s['student_lrn'] ?? ''));
                                 ?>
-                                <tr>
+                                <tr
+                                    data-account="<?php echo htmlspecialchars(strtolower($sAccount), ENT_QUOTES); ?>"
+                                    data-name="<?php echo htmlspecialchars(strtolower($sFullName), ENT_QUOTES); ?>"
+                                    data-lrn="<?php echo htmlspecialchars(strtolower($sLrn), ENT_QUOTES); ?>"
+                                    data-grade="<?php echo htmlspecialchars(strtolower((string) $sGradeLevel), ENT_QUOTES); ?>"
+                                    data-section="<?php echo htmlspecialchars(strtolower((string) $sSection), ENT_QUOTES); ?>"
+                                    data-sex="<?php echo htmlspecialchars(strtolower((string) ($s['sex'] ?? '')), ENT_QUOTES); ?>"
+                                    data-type="<?php echo htmlspecialchars(strtolower($sType), ENT_QUOTES); ?>"
+                                    data-typename="<?php echo htmlspecialchars(strtolower(studentTypeLabel($sType)), ENT_QUOTES); ?>"
+                                >
                                     <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
                                     <td>
                                         <div class="name-block">
@@ -1357,7 +1390,6 @@ function studentTypeBadgeClass(string $t): string
                                             <?php echo htmlspecialchars(studentTypeLabel($sType)); ?>
                                         </span>
                                     </td>
-                                   
                                     <td>
                                         <button type="button" class="btn btn-primary btn-mini"
                                             onclick="openCameraModal(
@@ -1371,6 +1403,12 @@ function studentTypeBadgeClass(string $t): string
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
+                            <tr id="finalNoMatchesRow" style="display:none;">
+                                <td colspan="8" class="filter-hint">
+                                    <i class="fas fa-search" style="margin-right:6px;"></i>
+                                    No students match your search.
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -1564,6 +1602,73 @@ function studentTypeBadgeClass(string $t): string
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+        /* ── FINAL ENROLLMENT SEARCH ── */
+        function filterFinalTable(term) {
+            const table    = document.getElementById('finalEnrollmentTable');
+            const clearBtn = document.getElementById('finalSearchClearBtn');
+            const noMatch  = document.getElementById('finalNoMatchesRow');
+            if (!table) return;
+
+            const q = (term || '').trim().toLowerCase();
+
+            if (clearBtn) clearBtn.style.display = q !== '' ? '' : 'none';
+
+            const rows = table.querySelectorAll('tbody tr:not(#finalNoMatchesRow)');
+            let visibleCount = 0;
+
+            rows.forEach((row) => {
+                if (q === '') {
+                    row.style.display = '';
+                    visibleCount++;
+                    return;
+                }
+
+                const fields = [
+                    row.dataset.account  || '',
+                    row.dataset.name     || '',
+                    row.dataset.lrn      || '',
+                    row.dataset.grade    || '',
+                    row.dataset.section  || '',
+                    row.dataset.sex      || '',
+                    row.dataset.type     || '',
+                    row.dataset.typename || '',
+                ];
+
+                const prefixMatch = fields.some(f => f.startsWith(q));
+
+                const wordMatch = (row.dataset.name || '')
+                    .split(/\s+/)
+                    .some(w => w.startsWith(q));
+
+                if (prefixMatch || wordMatch) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (noMatch) {
+                noMatch.style.display = (visibleCount === 0 && q !== '') ? '' : 'none';
+            }
+        }
+
+        function clearFinalSearch() {
+            const input = document.getElementById('finalSearchInput');
+            if (!input) return;
+            input.value = '';
+            filterFinalTable('');
+            input.focus();
+        }
+
+        /* Esc clears the search first when it's focused */
+        document.addEventListener('keydown', (e) => {
+            const input = document.getElementById('finalSearchInput');
+            if (e.key === 'Escape' && input && document.activeElement === input) {
+                clearFinalSearch();
+            }
+        });
+
         /* ── PHOTO LIGHTBOX ── */
         const photoLightbox = document.getElementById('photoLightbox');
         const lightboxImg   = document.getElementById('lightboxImg');
@@ -1577,22 +1682,18 @@ function studentTypeBadgeClass(string $t): string
         }
 
         function closeLightbox(e) {
-            /* Don't close if the click was on the image itself */
             if (e && e.target && e.target === lightboxImg) return;
             photoLightbox.classList.remove('open');
             lightboxImg.removeAttribute('src');
             document.body.style.overflow = '';
         }
 
-        /* Clicking the image shouldn't close the lightbox */
         lightboxImg.addEventListener('click', (e) => e.stopPropagation());
 
-        /* Backdrop click closes */
         photoLightbox.addEventListener('click', (e) => {
             if (e.target === photoLightbox) closeLightbox(e);
         });
 
-        /* Esc closes lightbox first, then other modals */
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && photoLightbox.classList.contains('open')) {
                 closeLightbox();
