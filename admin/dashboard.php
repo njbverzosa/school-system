@@ -143,61 +143,45 @@ try {
 }
 
 /* ------------------------------------------------------------
-   Students for Enrollment — single combined list
+   FINAL ENROLLMENT — ALL students from students table,
+   grade_level + section pulled from enrolled_students via
+   account_number (latest row preferred).
    ------------------------------------------------------------ */
 $studentsForEnrollment = [];
 try {
-    $stmt = $pdo->prepare("
+    $stmt = $pdo->query("
         SELECT
             s.account_number,
             s.first_name,
             s.middle_name,
             s.surname,
-            s.grade_level,
-            s.sex,
-            s.birth_date,
             s.age,
-            s.school_name,
-            s.contact_number,
-            s.guardian,
-            s.guardian_contact_number,
+            s.sex,
             s.student_type,
-            s.registered_date,
-            s.enrollment_status,
             s.student_lrn,
             s.profile_account,
-            e.section        AS pending_section,
-            e.academic_year  AS pending_academic_year,
-            e.status         AS enrollment_record_status
+            s.enrollment_status,
+            e.grade_level   AS en_grade_level,
+            e.section       AS en_section,
+            e.academic_year AS en_academic_year,
+            e.status        AS en_status
         FROM students s
         LEFT JOIN enrolled_students e
-          ON e.account_number = s.account_number
-         AND e.status = 'Pending'
-        WHERE s.student_type IN ('O', 'N', 'T')
-          AND (
-                s.enrollment_status IS NULL
-                OR LOWER(s.enrollment_status) NOT IN ('enrolled', 'active')
+               ON e.account_number = s.account_number
+              AND e.id = (
+                    SELECT MAX(e2.id)
+                    FROM enrolled_students e2
+                    WHERE e2.account_number = s.account_number
               )
-        ORDER BY
-            CASE s.student_type
-                WHEN 'O' THEN 1
-                WHEN 'N' THEN 2
-                WHEN 'T' THEN 3
-                ELSE 4
-            END,
-            s.surname, s.first_name
+        ORDER BY s.surname, s.first_name
     ");
-    $stmt->execute();
     $studentsForEnrollment = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (PDOException $e) {
-    error_log("students-for-enrollment fetch failed: " . $e->getMessage());
+    error_log("final enrollment fetch failed: " . $e->getMessage());
 }
 
 /* ------------------------------------------------------------
-   CHANGED: All Students
-   - starts from students (so ALL students appear)
-   - LEFT JOIN enrolled_students for grade_level + section
-   - pulls student_lrn + profile_account from students
+   ALL STUDENTS — only students with an Active enrolled_students row.
    ------------------------------------------------------------ */
 $enrolledStudents = [];
 try {
@@ -214,9 +198,10 @@ try {
             e.section,
             e.academic_year,
             e.status AS enrollment_record_status
-        FROM students s
-        LEFT JOIN enrolled_students e
-          ON e.account_number = s.account_number
+        FROM enrolled_students e
+        INNER JOIN students s
+                ON s.account_number = e.account_number
+        WHERE e.status = 'Active'
         ORDER BY s.surname, s.first_name, e.id DESC
     ");
     $enrolledStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1233,12 +1218,13 @@ function studentTypeBadgeClass(string $t): string
             </div>
         </section>
 
+        <?php /* FINAL ENROLLMENT — ALL students + grade/section from enrolled_students */ ?>
         <?php if (!empty($studentsForEnrollment)): ?>
             <section class="section">
                 <div class="section-head">
                     <div>
-                        <h2>Students for Enrollment</h2>
-                        <p>Old Students, New Students, and Transferees awaiting enrollment.</p>
+                        <h2>Final Enrollment</h2>
+                        <p>Take picture, update LRN, approve enrollment.</p>
                     </div>
                 </div>
                 <div class="table-wrap">
@@ -1247,12 +1233,11 @@ function studentTypeBadgeClass(string $t): string
                             <tr>
                                 <th>Account #</th>
                                 <th>Full Name</th>
-                                <th>LRN</th>
-                                <th>Type</th>
-                                <th>Grade Level</th>
+                                <th>Age</th>
                                 <th>Sex</th>
-                                <th>Status</th>
-                                <th>ID Picture</th>
+                                <th>Grade Level</th>
+                                <th>Section</th>
+                                <th>Type</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -1264,13 +1249,18 @@ function studentTypeBadgeClass(string $t): string
                                     ($s['middle_name'] ?? '') . ' ' .
                                     ($s['surname'] ?? '')
                                 );
-                                $sContact = trim((string) ($s['contact_number'] ?? ''));
                                 $sAccount = (string) ($s['account_number'] ?? '');
                                 $sType    = (string) ($s['student_type'] ?? '');
-                                $isPendingRow = (strtolower((string) ($s['enrollment_record_status'] ?? '')) === 'pending');
 
+                                /* grade_level + section from enrolled_students */
+                                $sGradeLevel = $s['en_grade_level'] ?? '';
+                                $sSection    = $s['en_section'] ?? '';
+
+                                /* Pending state */
+                                $isPendingRow = (strtolower((string) ($s['en_status'] ?? '')) === 'pending');
+
+                                /* LRN + photo from students */
                                 $sLrn = trim((string) ($s['student_lrn'] ?? ''));
-
                                 $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
                                 $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
                                 ?>
@@ -1278,49 +1268,30 @@ function studentTypeBadgeClass(string $t): string
                                     <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
                                     <td>
                                         <div class="name-block">
-                                            <span><?php echo htmlspecialchars($sFullName); ?></span>
-                                            <?php if ($sContact !== ''): ?>
-                                                <span class="contact-sub"><?php echo htmlspecialchars($sContact); ?></span>
-                                            <?php endif; ?>
+                                            <span><?php echo htmlspecialchars($sFullName ?: '—'); ?></span>
                                         </div>
                                     </td>
-                                    <td><?php echo htmlspecialchars($sLrn !== '' ? $sLrn : '—'); ?></td>
+                                    <td><?php echo htmlspecialchars((string) ($s['age'] ?? '—')); ?></td>
+                                    <td><?php echo htmlspecialchars((string) ($s['sex'] ?? '—')); ?></td>
+                                    <td>
+                                        <?php echo $sGradeLevel !== '' && $sGradeLevel !== null
+                                            ? ('Grade ' . htmlspecialchars((string) $sGradeLevel))
+                                            : '—'; ?>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($sSection !== '' && $sSection !== null ? (string) $sSection : '—'); ?></td>
                                     <td>
                                         <span class="type-badge <?php echo htmlspecialchars(studentTypeBadgeClass($sType)); ?>">
                                             <?php echo htmlspecialchars(studentTypeLabel($sType)); ?>
                                         </span>
                                     </td>
-                                    <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
-                                    <td><?php echo htmlspecialchars($s['sex'] ?? '—'); ?></td>
-                                    <td>
-                                        <?php if ($isPendingRow): ?>
-                                            <span class="pending-pill">
-                                                <i class="fas fa-hourglass-half"></i> Pending
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="type-badge type-default">Not Enrolled</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ($sPhotoUrl !== ''): ?>
-                                            <a href="<?php echo htmlspecialchars($sPhotoUrl); ?>" target="_blank" rel="noopener"
-                                               class="id-photo-link" title="View ID picture">
-                                                <img src="<?php echo htmlspecialchars($sPhotoUrl); ?>"
-                                                     alt="ID picture of <?php echo htmlspecialchars($sFullName ?: $sAccount); ?>"
-                                                     class="id-photo-thumb"
-                                                     onerror="this.parentElement.innerHTML='<span class=&quot;id-photo-missing&quot;>No photo</span>';">
-                                            </a>
-                                        <?php else: ?>
-                                            <span class="id-photo-missing">No photo</span>
-                                        <?php endif; ?>
-                                    </td>
+                                  
                                     <td>
                                         <button type="button" class="btn btn-primary btn-mini"
                                             onclick="openCameraModal(
                                                 '<?php echo htmlspecialchars($sAccount, ENT_QUOTES); ?>',
                                                 '<?php echo htmlspecialchars(addslashes($sFullName), ENT_QUOTES); ?>',
-                                                '<?php echo htmlspecialchars(addslashes((string) ($s['grade_level'] ?? '')), ENT_QUOTES); ?>',
-                                                '<?php echo htmlspecialchars(addslashes((string) ($s['pending_section'] ?? '')), ENT_QUOTES); ?>'
+                                                '<?php echo htmlspecialchars(addslashes((string) ($sGradeLevel ?? '')), ENT_QUOTES); ?>',
+                                                '<?php echo htmlspecialchars(addslashes((string) ($sSection ?? '')), ENT_QUOTES); ?>'
                                             )">
                                             <i class="fas fa-camera"></i> Take Camera
                                         </button>
@@ -1333,13 +1304,13 @@ function studentTypeBadgeClass(string $t): string
             </section>
         <?php endif; ?>
 
-        <?php /* CHANGED: All Students — starts from students, LEFT JOIN enrolled_students */ ?>
+        <?php /* ALL STUDENTS — only enrolled_students WHERE status = 'Active' */ ?>
         <?php if (!empty($enrolledStudents)): ?>
             <section class="section">
                 <div class="section-head">
                     <div>
                         <h2>All Students</h2>
-                        <p>Every student in the system, with grade level and section from enrolled_students when available.</p>
+                        <p>All students that finished the final enrollment.</p>
                     </div>
                     <div>
                         <form method="GET" action="dashboard.php" id="gradeFilterForm">
@@ -1372,7 +1343,6 @@ function studentTypeBadgeClass(string $t): string
                                     <th>Grade Level</th>
                                     <th>Section</th>
                                     <th>Academic Year</th>
-                                    <th>Status</th>
                                     <th>ID Picture</th>
                                 </tr>
                             </thead>
@@ -1391,16 +1361,8 @@ function studentTypeBadgeClass(string $t): string
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
                                     $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
 
-                                    /* Enrollment status: prefer enrolled_students.status, fall back to students.enrollment_status */
-                                    $sStatus = trim((string) ($s['enrollment_record_status'] ?? ''));
-                                    if ($sStatus === '') {
-                                        $sStatus = trim((string) ($s['enrollment_status'] ?? ''));
-                                    }
-
-                                    /* Grade level: from enrolled_students; empty if no row */
-                                    $sGradeLevel = $s['grade_level'] ?? '';
-                                    $sSection    = $s['section'] ?? '';
-                                    $sAcademic   = $s['academic_year'] ?? '';
+                                    /* Always Active because of WHERE clause, but guard anyway */
+                                    $sStatus = trim((string) ($s['enrollment_record_status'] ?? 'Active'));
                                     ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
@@ -1410,20 +1372,10 @@ function studentTypeBadgeClass(string $t): string
                                             </div>
                                         </td>
                                         <td><?php echo htmlspecialchars($sLrn !== '' ? $sLrn : '—'); ?></td>
-                                        <td><?php echo $sGradeLevel !== '' ? ('Grade ' . htmlspecialchars((string) $sGradeLevel)) : '—'; ?></td>
-                                        <td><?php echo htmlspecialchars($sSection !== '' ? (string) $sSection : '—'); ?></td>
-                                        <td><?php echo htmlspecialchars($sAcademic !== '' ? (string) $sAcademic : '—'); ?></td>
-                                        <td>
-                                            <?php if (strcasecmp($sStatus, 'Active') === 0): ?>
-                                                <span class="type-badge type-n"><?php echo htmlspecialchars($sStatus); ?></span>
-                                            <?php elseif (strcasecmp($sStatus, 'Pending') === 0): ?>
-                                                <span class="pending-pill">
-                                                    <i class="fas fa-hourglass-half"></i> <?php echo htmlspecialchars($sStatus); ?>
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="type-badge type-default"><?php echo htmlspecialchars($sStatus ?: '—'); ?></span>
-                                            <?php endif; ?>
-                                        </td>
+                                        <td>Grade <?php echo htmlspecialchars((string) ($s['grade_level'] ?? '—')); ?></td>
+                                        <td><?php echo htmlspecialchars((string) ($s['section'] ?? '—')); ?></td>
+                                        <td><?php echo htmlspecialchars((string) ($s['academic_year'] ?? '—')); ?></td>
+                                        
                                         <td>
                                             <?php if ($sPhotoUrl !== ''): ?>
                                                 <a href="<?php echo htmlspecialchars($sPhotoUrl); ?>" target="_blank" rel="noopener"
