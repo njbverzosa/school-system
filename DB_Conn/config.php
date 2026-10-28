@@ -10,7 +10,7 @@ $password = 'Nj_Verzosa@24';
 // $host = 'localhost'; // This is always the hostname for Hostinger shared hosting
 // $dbname = 'school_system';
 // $username = 'root';
-// $password = ''; // Enter the password you set for this database user
+// $password = ''; // Enter the password you set for this database use
 
 
 try {
