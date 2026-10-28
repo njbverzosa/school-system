@@ -3161,7 +3161,7 @@ try {
 
     <!-- DEVTOOLS DETECTION OVERLAY -->
     <div id="hackOverlay" role="alert" aria-live="assertive">
-        <div class="hack-note">Inspect tool detected — please close it to continue.</div>
+        <div class="hack-note">Wag mo ng ituloy ang binabalak mo</div>
     </div>
 
     <script>
