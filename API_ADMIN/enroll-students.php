@@ -42,7 +42,6 @@ if (!is_string($clientToken) || !hash_equals($sessionToken, $clientToken)) {
 }
 
 /* Auth — admin */
-$isAdmin = false;
 $adminUser = null;
 
 if (!empty($_SESSION['account_number']) && is_string($_SESSION['account_number'])) {
@@ -120,7 +119,7 @@ function columnExists(PDO $pdo, string $table, string $col): bool
 }
 
 /* ------------------------------------------------------------
-   Route by action (only enroll_student here, kept for clarity)
+   Route by action
    ------------------------------------------------------------ */
 $action = trim((string) ($_POST['action'] ?? ''));
 
@@ -158,7 +157,7 @@ if (!in_array($sectionRaw, $SECTION_OPTIONS, true)) {
 $gradeLevel   = (int) $gradeLevelRaw;
 $academicYear = currentAcademicYear();
 
-/* School name to store in enrolled_students = the ADMIN's school (school student is enrolling INTO) */
+/* School name to store in enrolled_students */
 $enrollSchoolName = trim((string) ($adminUser['school_name'] ?? ''));
 if ($enrollSchoolName === '') {
     $enrollSchoolName = 'Eguia National High School';
@@ -178,10 +177,13 @@ if ($studentTypeCol === null) {
 /* Detect whether enrollment_access column exists */
 $hasEnrollmentAccessCol = columnExists($pdo, 'students', 'enrollment_access');
 
+/* Detect whether class_adviser column exists (needed for INSERT/UPDATE) */
+$hasClassAdviserCol = columnExists($pdo, 'enrolled_students', 'class_adviser');
+
 try {
     $pdo->beginTransaction();
 
-    /* Fetch + lock student row to prevent race / double enroll */
+    /* Fetch + lock student row */
     $stmt = $pdo->prepare("
         SELECT account_number, {$studentTypeCol} AS student_type, enrollment_status
         FROM students
@@ -206,7 +208,7 @@ try {
         exit;
     }
 
-    if (($student['enrollment_status'] ?? '') === 'enrolled') {
+    if (strtolower((string) ($student['enrollment_status'] ?? '')) === 'enrolled') {
         $pdo->rollBack();
         setFlash('error', 'Student is already enrolled.');
         header('Location: ../admin/dashboard.php');
@@ -221,43 +223,137 @@ try {
         LIMIT 1
     ");
     $check->execute([$accountNumber, $academicYear]);
+    $rowExists = (bool) $check->fetchColumn();
 
-    if ($check->fetchColumn()) {
-        $upd = $pdo->prepare("
-            UPDATE enrolled_students
-            SET grade_level = ?, section = ?, status = 'Enrolled', school_name = ?
-            WHERE account_number = ? AND academic_year = ?
-        ");
-        $upd->execute([$gradeLevel, $sectionRaw, $enrollSchoolName, $accountNumber, $academicYear]);
+    /* ------------------------------------------------------------
+       Resolve class adviser:
+         1. assigned_teachers: grade_level + section + advisory = 1
+            → grab that row's account_number
+         2. teachers: look up first_name / middle_name / surname
+         3. Build "First Middle Surname"
+       ------------------------------------------------------------ */
+    $classAdviser = null;
+
+    if ($hasClassAdviserCol) {
+        try {
+            $atStmt = $pdo->prepare("
+                SELECT account_number
+                FROM assigned_teachers
+                WHERE grade_level = ?
+                  AND section = ?
+                  AND advisory = 1
+                LIMIT 1
+            ");
+            $atStmt->execute([(string) $gradeLevel, $sectionRaw]);
+            $adviserAccountNumber = $atStmt->fetchColumn();
+
+            if ($adviserAccountNumber) {
+                $tStmt = $pdo->prepare("
+                    SELECT first_name, middle_name, surname
+                    FROM teachers
+                    WHERE account_number = ?
+                    LIMIT 1
+                ");
+                $tStmt->execute([$adviserAccountNumber]);
+                $teacher = $tStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($teacher) {
+                    $classAdviser = trim(
+                        ($teacher['first_name'] ?? '') . ' ' .
+                        ($teacher['middle_name'] ?? '') . ' ' .
+                        ($teacher['surname'] ?? '')
+                    );
+                    $classAdviser = preg_replace('/\s+/', ' ', $classAdviser) ?: null;
+                } else {
+                    error_log("enroll-students: teacher not found for account_number=" . var_export($adviserAccountNumber, true));
+                }
+            } else {
+                error_log("enroll-students: no advisory teacher for grade={$gradeLevel} section={$sectionRaw}");
+            }
+        } catch (PDOException $e) {
+            error_log("enroll-students: adviser lookup failed: " . $e->getMessage());
+        }
     } else {
-        $ins = $pdo->prepare("
-            INSERT INTO enrolled_students
-                (account_number, grade_level, section, academic_year, status, school_name)
-            VALUES
-                (?, ?, ?, ?, 'Active', ?)
-        ");
-        $ins->execute([
-            $accountNumber,
-            $gradeLevel,
-            $sectionRaw,
-            $academicYear,
-            $enrollSchoolName,
-        ]);
+        error_log("enroll-students: enrolled_students.class_adviser column does not exist; skipping adviser write.");
     }
 
-    /* Flip student record to 'enrolled' and close enrollment_access */
+    /* ---------------- INSERT / UPDATE ---------------- */
+    if ($rowExists) {
+        if ($hasClassAdviserCol) {
+            $upd = $pdo->prepare("
+                UPDATE enrolled_students
+                SET grade_level = ?, section = ?, status = 'Enrolled', school_name = ?, class_adviser = ?
+                WHERE account_number = ? AND academic_year = ?
+            ");
+            $upd->execute([
+                $gradeLevel,
+                $sectionRaw,
+                $enrollSchoolName,
+                $classAdviser,
+                $accountNumber,
+                $academicYear,
+            ]);
+        } else {
+            $upd = $pdo->prepare("
+                UPDATE enrolled_students
+                SET grade_level = ?, section = ?, status = 'Enrolled', school_name = ?
+                WHERE account_number = ? AND academic_year = ?
+            ");
+            $upd->execute([
+                $gradeLevel,
+                $sectionRaw,
+                $enrollSchoolName,
+                $accountNumber,
+                $academicYear,
+            ]);
+        }
+    } else {
+        if ($hasClassAdviserCol) {
+            $ins = $pdo->prepare("
+                INSERT INTO enrolled_students
+                    (account_number, grade_level, section, academic_year, status, school_name, class_adviser)
+                VALUES
+                    (?, ?, ?, ?, 'Active', ?, ?)
+            ");
+            $ins->execute([
+                $accountNumber,
+                $gradeLevel,
+                $sectionRaw,
+                $academicYear,
+                $enrollSchoolName,
+                $classAdviser,
+            ]);
+        } else {
+            $ins = $pdo->prepare("
+                INSERT INTO enrolled_students
+                    (account_number, grade_level, section, academic_year, status, school_name)
+                VALUES
+                    (?, ?, ?, ?, 'Active', ?)
+            ");
+            $ins->execute([
+                $accountNumber,
+                $gradeLevel,
+                $sectionRaw,
+                $academicYear,
+                $enrollSchoolName,
+            ]);
+        }
+    }
+
+    /* Flip student record to 'enrolled' */
     if ($hasEnrollmentAccessCol) {
         $upd = $pdo->prepare("
             UPDATE students
-            SET enrollment_status = 'Enrolled',
-                enrollment_access = 0
+            SET enrollment_status = 'Enrolled', student_type = 'O', 
+                enrollment_access = 1
             WHERE account_number = ?
         ");
         $upd->execute([$accountNumber]);
     } else {
         $upd = $pdo->prepare("
-            UPDATE students
-            SET enrollment_status = 'enrolled'
+           UPDATE students
+            SET enrollment_status = 'Enrolled', student_type = 'O', 
+                enrollment_access = 1
             WHERE account_number = ?
         ");
         $upd->execute([$accountNumber]);

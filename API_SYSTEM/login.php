@@ -10,8 +10,8 @@ header('Referrer-Policy: no-referrer');
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 0,
-        'path'     => '/',
-        'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        'path' => '/',
+        'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -31,7 +31,7 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 $sessionToken = $_SESSION['csrf_token'];
-$clientToken  = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+$clientToken = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
 if (!is_string($clientToken) || !hash_equals($sessionToken, $clientToken)) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Invalid security token. Refresh and try again.']);
@@ -53,7 +53,7 @@ $_SESSION['login_attempts'][] = $now;
 
 /* Input */
 $accountNumber = trim((string) ($_POST['account_number'] ?? ''));
-$pinPlain      = trim((string) ($_POST['pin'] ?? ''));
+$pinPlain = trim((string) ($_POST['pin'] ?? ''));
 
 if ($accountNumber === '' || $pinPlain === '') {
     echo json_encode(['success' => false, 'message' => 'Ilagay ang account number at PIN.']);
@@ -64,8 +64,8 @@ if ($accountNumber === '' || $pinPlain === '') {
 $tables = [
     'student' => 'students',
     'teacher' => 'teachers',
-    'staff'   => 'faculties_staff',
-    'admin'   => 'admins',
+    'staff' => 'faculties_staff',
+    'admin' => 'admins',
 ];
 
 $foundUser = null;
@@ -123,11 +123,11 @@ if (!in_array($userType, $allowedTypes, true)) {
    ------------------------------------------------------------ */
 if ($userType === 'student') {
     $enrollmentStatus = strtolower(trim((string) ($foundUser['enrollment_status'] ?? 'not enrolled')));
-    $studentType      = strtoupper(trim((string) ($foundUser['student_type'] ?? '')));
+    $studentType = strtoupper(trim((string) ($foundUser['student_type'] ?? '')));
 
     /* Old Student + Enrolled  → academic portal
        Everyone else (N/T, or O but not enrolled) → enrollment form */
-    if ($studentType === 'O' && $enrollmentStatus === 'enrolled') {
+    if (in_array($studentType, ['O', 'N', 'T'], true) && $enrollmentStatus === 'enrolled') {
         $redirect = 'student/academic-information.php';
     } else {
         $redirect = 'student/student-enrollment.php';
@@ -142,23 +142,23 @@ if ($userType === 'student') {
 
 /* Session */
 session_regenerate_id(true);
-$_SESSION['user_id']        = (int) $foundUser['id'];
+$_SESSION['user_id'] = (int) $foundUser['id'];
 $_SESSION['account_number'] = $foundUser['account_number'];
-$_SESSION['user_type']      = $userType;
-$_SESSION['full_name']      = trim(
+$_SESSION['user_type'] = $userType;
+$_SESSION['full_name'] = trim(
     ($foundUser['first_name'] ?? '') . ' ' .
     ($foundUser['middle_name'] ?? '') . ' ' .
     ($foundUser['surname'] ?? '')
 );
-$_SESSION['logged_in_at']   = time();
+$_SESSION['logged_in_at'] = time();
 
 echo json_encode([
-    'success'  => true,
-    'message'  => 'Matagumpay ang pag-login!',
+    'success' => true,
+    'message' => 'Matagumpay ang pag-login!',
     'redirect' => $redirect,
-    'user'     => [
+    'user' => [
         'account_number' => $foundUser['account_number'],
-        'full_name'      => $_SESSION['full_name'],
-        'user_type'      => $userType,
+        'full_name' => $_SESSION['full_name'],
+        'user_type' => $userType,
     ],
 ]);
