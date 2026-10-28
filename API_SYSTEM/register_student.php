@@ -81,7 +81,10 @@ $contactNumber         = trim((string) ($_POST['contact_number'] ?? ''));
 $guardian              = trim((string) ($_POST['guardian'] ?? ''));
 $guardianContactNumber = trim((string) ($_POST['guardian_contact_number'] ?? ''));
 $gradeLevel            = trim((string) ($_POST['grade_level'] ?? ''));
-$studentType           = trim((string) ($_POST['student_type'] ?? ''));
+
+/* Accept both `student_type` (new) and `student_status` (legacy) */
+$studentType = trim((string) ($_POST['student_type'] ?? ($_POST['student_status'] ?? '')));
+$studentType = strtoupper($studentType);
 
 // Validation
 $errors = [];
@@ -140,7 +143,8 @@ if ($guardianContactNumber === '' || !preg_match('/^[0-9+\-\s]{7,15}$/', $guardi
 if ($gradeLevel === '' || !preg_match('/^(?:[1-9]|1[0-2])$/', $gradeLevel))
     $errors['grade_level'] = 'Please choose a grade level (1–12).';
 
-if (!in_array($studentType, ['O', 'T'], true))
+/* Accept O (Old), N (New), T (Transferee) */
+if (!in_array($studentType, ['O', 'N', 'T'], true))
     $errors['student_type'] = 'Please choose a student type.';
 
 if ($errors) {
@@ -210,9 +214,10 @@ try {
 
 // Hash PIN + keep plaintext copy in pin_text
 $pinHash = password_hash($pinPlain, PASSWORD_DEFAULT);
-$pinText = (int) $pinPlain; // e.g. 112233
+$pinText = (int) $pinPlain;
 
-// Insert — students.student_type (formerly student_status)
+/* Insert — students.student_type (formerly student_status)
+   enrollment_status aligned to the column default 'Not Enrolled' */
 $sql = "INSERT INTO students (
             account_number, pin, pin_text,
             first_name, middle_name, surname,
@@ -226,7 +231,7 @@ $sql = "INSERT INTO students (
             :age, :sex, :birth_date, :birth_place, :address, :contact_number,
             :guardian, :guardian_contact_number,
             :registered_date, :profile_account, 'student',
-            :school_name, :grade_level, :student_type, 'pending'
+            :school_name, :grade_level, :student_type, 'Not Enrolled'
         )";
 
 $params = [
