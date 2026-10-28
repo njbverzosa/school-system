@@ -192,7 +192,7 @@ try {
 }
 
 /* ------------------------------------------------------------
-   Enrolled Students — Active only
+   Enrolled Students — Active only (includes LRN + profile photo)
    ------------------------------------------------------------ */
 $enrolledStudents = [];
 try {
@@ -205,7 +205,10 @@ try {
             s.first_name,
             s.middle_name,
             s.surname,
-            s.contact_number
+            s.contact_number,
+            s.lrn,
+            s.student_lrn,
+            s.profile_account
         FROM enrolled_students e
         LEFT JOIN students s ON s.account_number = e.account_number
         WHERE e.status = 'Active'
@@ -684,6 +687,36 @@ function studentTypeBadgeClass(string $t): string
             background: transparent;
             border: none;
             color: #92400e;
+        }
+
+        /* ID picture thumbnail + fallback */
+        .id-photo-link {
+            display: inline-block;
+            line-height: 0;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            transition: transform .15s, box-shadow .15s, border-color .15s;
+        }
+
+        .id-photo-link:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px -8px rgba(15, 23, 42, .35);
+            border-color: var(--primary-2);
+        }
+
+        .id-photo-thumb {
+            width: 44px;
+            height: 44px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .id-photo-missing {
+            display: inline-block;
+            font-size: 11.5px;
+            color: var(--muted);
+            font-style: italic;
         }
 
         .btn {
@@ -1308,9 +1341,11 @@ function studentTypeBadgeClass(string $t): string
                                 <tr>
                                     <th>Account #</th>
                                     <th>Full Name</th>
+                                    <th>LRN</th>
                                     <th>Grade Level</th>
                                     <th>Section</th>
                                     <th>Academic Year</th>
+                                    <th>ID Picture</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1323,6 +1358,16 @@ function studentTypeBadgeClass(string $t): string
                                     );
                                     $sContact = trim((string) ($s['contact_number'] ?? ''));
                                     $sAccount = (string) ($s['account_number'] ?? '');
+
+                                    /* Prefer `lrn`; fall back to `student_lrn` if `lrn` is empty */
+                                    $sLrn = trim((string) ($s['lrn'] ?? ''));
+                                    if ($sLrn === '') {
+                                        $sLrn = trim((string) ($s['student_lrn'] ?? ''));
+                                    }
+
+                                    /* profile_account stores the filename only */
+                                    $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
+                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
                                     ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
@@ -1334,9 +1379,23 @@ function studentTypeBadgeClass(string $t): string
                                                 <?php endif; ?>
                                             </div>
                                         </td>
+                                        <td><?php echo htmlspecialchars($sLrn !== '' ? $sLrn : '—'); ?></td>
                                         <td>Grade <?php echo htmlspecialchars($s['grade_level'] ?? '—'); ?></td>
                                         <td><?php echo htmlspecialchars($s['section'] ?? '—'); ?></td>
                                         <td><?php echo htmlspecialchars($s['academic_year'] ?? '—'); ?></td>
+                                        <td>
+                                            <?php if ($sPhotoUrl !== ''): ?>
+                                                <a href="<?php echo htmlspecialchars($sPhotoUrl); ?>" target="_blank" rel="noopener"
+                                                   class="id-photo-link" title="View ID picture">
+                                                    <img src="<?php echo htmlspecialchars($sPhotoUrl); ?>"
+                                                         alt="ID picture of <?php echo htmlspecialchars($sFullName ?: $sAccount); ?>"
+                                                         class="id-photo-thumb"
+                                                         onerror="this.parentElement.innerHTML='<span class=&quot;id-photo-missing&quot;>No photo</span>';">
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="id-photo-missing">No photo</span>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -1396,7 +1455,7 @@ function studentTypeBadgeClass(string $t): string
                 </button>
             </div>
 
-            <?php /* Only LRN input (12 digits) — contact number removed */ ?>
+            <?php /* Only LRN input (12 digits) */ ?>
             <div class="field-group">
                 <label class="field-label" for="cameraLrnInput">LRN (12 digits)</label>
                 <input type="text" class="field-input" id="cameraLrnInput"
