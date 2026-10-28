@@ -1,7 +1,7 @@
 <?php
 // API_ADMIN/enroll-students.php
 // Handles: (1) enrolling a New Student / Transferee, (2) approving a student
-// with a captured camera photo + contact + LRN.
+// with a captured camera photo + LRN.
 // POST-only. CSRF required. Admin session required.
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
@@ -134,7 +134,6 @@ function decodeJpegDataUrl(string $dataUrl): ?string
     if ($bin === false || strlen($bin) < 100) {
         return null;
     }
-    /* Verify it is actually a JPEG */
     if (substr($bin, 0, 3) !== "\xFF\xD8\xFF") {
         return null;
     }
@@ -152,7 +151,6 @@ function saveStudentProfilePhoto(string $account, string $jpegBytes): ?string
         return null;
     }
 
-    // Absolute filesystem path to the folder (adjust if your project root differs)
     $absDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'Students_Profile';
 
     if (!is_dir($absDir)) {
@@ -173,7 +171,6 @@ function saveStudentProfilePhoto(string $account, string $jpegBytes): ?string
         return null;
     }
 
-    // Relative path for DB / web
     return 'Students_Profile/' . $account . '.jpg';
 }
 
@@ -241,15 +238,14 @@ if ($action === '' || !in_array($action, $allowedActions, true)) {
    ------------------------------------------------------------
    Fields:
      - account_number  (required)
-     - contact_number  (required)
-     - lrn             (required)
-     - grade_level     (optional; if blank, use existing/pending)
-     - section         (optional; if blank, use existing/pending)
+     - lrn             (required, exactly 12 digits)
+     - grade_level     (optional)
+     - section         (optional)
      - photo_data      (required; data:image/jpeg;base64,...)
+   NOTE: contact_number was removed.
    ============================================================ */
 if ($action === 'approve_with_capture') {
     $accountNumber = trim((string) ($_POST['account_number'] ?? ''));
-    $contactNumber = trim((string) ($_POST['contact_number'] ?? ''));
     $lrnInput      = trim((string) ($_POST['lrn'] ?? ''));
     $gradeLevelRaw = trim((string) ($_POST['grade_level'] ?? ''));
     $sectionRaw    = trim((string) ($_POST['section'] ?? ''));
@@ -261,14 +257,9 @@ if ($action === 'approve_with_capture') {
         exit;
     }
 
-    if (!preg_match('/^[0-9+\-\s()]{7,15}$/', $contactNumber)) {
-        setFlash('error', 'Please enter a valid contact number.');
-        header('Location: ../admin/dashboard.php');
-        exit;
-    }
-
-    if ($lrnInput === '' || !preg_match('/^\d{10,12}$/', $lrnInput)) {
-        setFlash('error', 'Please enter a valid LRN (10–12 digits).');
+    /* CHANGED: LRN must be exactly 12 digits */
+    if ($lrnInput === '' || !preg_match('/^\d{12}$/', $lrnInput)) {
+        setFlash('error', 'LRN must be exactly 12 digits (numbers only).');
         header('Location: ../admin/dashboard.php');
         exit;
     }
@@ -298,11 +289,10 @@ if ($action === 'approve_with_capture') {
     $hasEnrollmentAccessCol = columnExists($pdo, 'students', 'enrollment_access');
     $hasProfileCol          = columnExists($pdo, 'students', 'profile_account');
     $hasLrnCol              = columnExists($pdo, 'students', 'lrn');
-    $hasContactCol          = columnExists($pdo, 'students', 'contact_number');
+    $hasStudentLrnCol       = columnExists($pdo, 'students', 'student_lrn');
     $hasClassAdviserCol     = columnExists($pdo, 'enrolled_students', 'class_adviser');
 
-    /* Determine grade + section:
-       If posted values are blank, look up the pending enrolled_students row. */
+    /* Determine grade + section */
     $gradeLevel = null;
     $section    = null;
 
@@ -394,10 +384,11 @@ if ($action === 'approve_with_capture') {
             $setParts[] = "lrn = ?";
             $params[]   = $lrnInput;
         }
-        if ($hasContactCol) {
-            $setParts[] = "contact_number = ?";
-            $params[]   = $contactNumber;
+        if ($hasStudentLrnCol) {
+            $setParts[] = "student_lrn = ?";
+            $params[]   = $lrnInput;
         }
+        // CHANGED: contact_number is no longer set here
 
         $params[] = $accountNumber;
 
@@ -435,7 +426,6 @@ if ($action === 'approve_with_capture') {
                 ]);
             }
         } else {
-            /* No pending row → insert a fresh Active row */
             if ($hasClassAdviserCol) {
                 $ins = $pdo->prepare("
                     INSERT INTO enrolled_students
@@ -487,7 +477,7 @@ if ($action === 'approve_with_capture') {
 }
 
 /* ============================================================
-   ACTION: enroll_student (legacy New Student / Transferee path)
+   ACTION: enroll_student (legacy path — unchanged)
    ============================================================ */
 $accountNumber = trim((string) ($_POST['account_number'] ?? ''));
 $gradeLevelRaw = trim((string) ($_POST['grade_level'] ?? ''));

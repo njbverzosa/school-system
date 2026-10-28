@@ -864,7 +864,7 @@ function studentTypeBadgeClass(string $t): string
             display: block;
         }
 
-        /* CHANGED: mirror the live preview so the camera is "flipped" */
+        /* Mirror the live preview so the camera is "flipped" */
         .camera-box video {
             transform: scaleX(-1);
         }
@@ -1361,7 +1361,7 @@ function studentTypeBadgeClass(string $t): string
         </div>
     </div>
 
-    <?php /* Camera + Contact + LRN + Approve modal */ ?>
+    <?php /* Camera + LRN + Approve modal */ ?>
     <div class="modal-overlay" id="cameraModal">
         <div class="modal-box camera-modal-box">
             <div class="camera-modal-head">
@@ -1396,13 +1396,7 @@ function studentTypeBadgeClass(string $t): string
                 </button>
             </div>
 
-            <div class="field-group">
-                <label class="field-label" for="cameraContactInput">Contact Number</label>
-                <input type="tel" class="field-input" id="cameraContactInput"
-                    placeholder="e.g. 09123456789" autocomplete="tel" inputmode="tel" maxlength="15" />
-            </div>
-
-            <?php /* CHANGED: LRN field — 12-digit numeric only */ ?>
+            <?php /* Only LRN input (12 digits) — contact number removed */ ?>
             <div class="field-group">
                 <label class="field-label" for="cameraLrnInput">LRN (12 digits)</label>
                 <input type="text" class="field-input" id="cameraLrnInput"
@@ -1534,12 +1528,11 @@ function studentTypeBadgeClass(string $t): string
         const captureBtn = document.getElementById('captureBtn');
         const retakeBtn = document.getElementById('retakeBtn');
         const approveBtn = document.getElementById('approveBtn');
-        const cameraContactInput = document.getElementById('cameraContactInput');
         const cameraLrnInput = document.getElementById('cameraLrnInput');
         const cameraStatus = document.getElementById('cameraStatus');
         const cameraStudentInfo = document.getElementById('cameraStudentInfo');
 
-        /* CHANGED: force LRN input to be numbers-only, max 12 */
+        /* Force LRN input to be numbers-only, max 12 */
         cameraLrnInput.addEventListener('input', () => {
             cameraLrnInput.value = cameraLrnInput.value.replace(/\D+/g, '').slice(0, 12);
         });
@@ -1598,7 +1591,6 @@ function studentTypeBadgeClass(string $t): string
                 ' &middot; Account #: ' + escapeHtml(cameraAccount) +
                 '<br><span style="color:#64748b">' + escapeHtml(gradeTxt + sectionTxt) + '</span>';
 
-            cameraContactInput.value = '';
             cameraLrnInput.value = '';
             capturedDataUrl = '';
 
@@ -1619,7 +1611,6 @@ function studentTypeBadgeClass(string $t): string
             cameraBox.classList.remove('captured');
             capturedPreview.removeAttribute('src');
             capturedDataUrl = '';
-            cameraContactInput.value = '';
             cameraLrnInput.value = '';
             setCameraStatus('');
         }
@@ -1637,11 +1628,10 @@ function studentTypeBadgeClass(string $t): string
 
             const ctx = cameraCanvas.getContext('2d');
 
-            /* CHANGED: mirror the draw so the captured photo matches the flipped preview */
+            /* Mirror the draw so the captured photo matches the flipped preview */
             ctx.translate(w, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(cameraVideo, 0, 0, w, h);
-            /* reset transform so subsequent draws aren't affected */
             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
             capturedDataUrl = cameraCanvas.toDataURL('image/jpeg', 0.85);
@@ -1651,7 +1641,7 @@ function studentTypeBadgeClass(string $t): string
 
             captureBtn.style.display = 'none';
             retakeBtn.style.display = '';
-            setCameraStatus('Photo captured. Fill in contact number and LRN, then approve.', 'success');
+            setCameraStatus('Photo captured. Fill in LRN, then approve.', 'success');
         }
 
         function retakePhoto() {
@@ -1673,19 +1663,7 @@ function studentTypeBadgeClass(string $t): string
                 return;
             }
 
-            const contact = (cameraContactInput.value || '').trim();
-            if (contact === '') {
-                setCameraStatus('Please enter a contact number.', 'error');
-                cameraContactInput.focus();
-                return;
-            }
-            if (!/^[0-9+\-\s()]{7,15}$/.test(contact)) {
-                setCameraStatus('Please enter a valid contact number.', 'error');
-                cameraContactInput.focus();
-                return;
-            }
-
-            /* CHANGED: LRN must be exactly 12 digits */
+            /* LRN must be exactly 12 digits */
             const lrn = (cameraLrnInput.value || '').trim();
             if (!/^\d{12}$/.test(lrn)) {
                 setCameraStatus('LRN must be exactly 12 digits (numbers only).', 'error');
@@ -1703,7 +1681,6 @@ function studentTypeBadgeClass(string $t): string
             const fields = {
                 action: 'approve_with_capture',
                 account_number: cameraAccount,
-                contact_number: contact,
                 lrn: lrn,
                 grade_level: cameraGrade,
                 section: cameraSection,
