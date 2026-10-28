@@ -817,7 +817,7 @@ if ($user) {
                         $hasProfile = $profileFile !== '' && strcasecmp($profileFile, 'profile-image.jpg') !== 0;
                         ?>
                         <?php if ($hasProfile): ?>
-                            <img src="../uploads/<?php echo htmlspecialchars($profileFile); ?>"
+                            <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/<?php echo htmlspecialchars($profileFile); ?>"
                                 alt="<?php echo htmlspecialchars($displayName); ?>"
                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
                             <div class="avatar-fallback" style="display:none;"><i class="fas fa-user"></i></div>
