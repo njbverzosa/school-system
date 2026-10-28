@@ -104,16 +104,12 @@ switch ($action) {
         $targetAccess = (int) $newStatusRaw;
 
         try {
-            $pdo->beginTransaction();
-
+            /* CHANGED: single placeholder — just set enrollment_access on every student row */
             $stmt = $pdo->prepare("
                 UPDATE students
                 SET enrollment_access = ?
             ");
-            $stmt->execute([$targetAccess, $targetAccess]);
-            $affected = $stmt->rowCount();
-
-            $pdo->commit();
+            $stmt->execute([$targetAccess]);
 
             setFlash(
                 'success',
@@ -122,57 +118,7 @@ switch ($action) {
                     : "Enrollment is now CLOSED for All Students."
             );
         } catch (PDOException $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
             error_log("enrollment-settings: toggle_enrollment failed: " . $e->getMessage());
-            setFlash('error', 'Could not update enrollment access. Please try again.');
-        }
-
-        header('Location: ../admin/dashboard.php');
-        exit;
-    }
-
-    /* ============================================================
-       ACTION 2: Set enrollment_access for a single student (1 or 0)
-       ============================================================ */
-    case 'update_student_status': {
-        $accountNumber = trim((string) ($_POST['account_number'] ?? ''));
-        $newStatusCode = trim((string) ($_POST['new_status'] ?? ''));
-
-        if ($accountNumber === '') {
-            setFlash('error', 'Missing student account number.');
-            header('Location: ../admin/dashboard.php');
-            exit;
-        }
-
-        if (!in_array($newStatusCode, ['0', '1'], true)) {
-            setFlash('error', 'Invalid enrollment access value. Must be 0 or 1.');
-            header('Location: ../admin/dashboard.php');
-            exit;
-        }
-
-        $targetAccess = (int) $newStatusCode;
-
-        try {
-            $stmt = $pdo->prepare("
-                UPDATE students
-                SET enrollment_access = ?
-                WHERE account_number = ?
-            ");
-            $stmt->execute([$targetAccess, $accountNumber]);
-
-            if ($stmt->rowCount() === 0) {
-                setFlash('error', 'Student not found or access unchanged.');
-            } else {
-                setFlash(
-                    'success',
-                    "Student {$accountNumber} enrollment access is now " .
-                    ($targetAccess === 1 ? 'OPEN' : 'CLOSED') . '.'
-                );
-            }
-        } catch (PDOException $e) {
-            error_log("enrollment-settings: update_student_status failed: " . $e->getMessage());
             setFlash('error', 'Could not update enrollment access. Please try again.');
         }
 
