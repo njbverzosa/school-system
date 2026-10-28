@@ -143,15 +143,19 @@ try {
 }
 
 /* ------------------------------------------------------------
-   FINAL ENROLLMENT — ALL students from students table,
-   grade_level + section pulled from enrolled_students via
-   account_number (latest row preferred).
+   FINAL ENROLLMENT — all Pending enrolled_students for the CURRENT
+   academic year, joined to students for name / age / sex / LRN.
    ------------------------------------------------------------ */
 $studentsForEnrollment = [];
 try {
-    $stmt = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT
-            s.account_number,
+            e.id            AS enrollment_id,
+            e.account_number,
+            e.grade_level   AS en_grade_level,
+            e.section       AS en_section,
+            e.academic_year AS en_academic_year,
+            e.status        AS en_status,
             s.first_name,
             s.middle_name,
             s.surname,
@@ -159,22 +163,15 @@ try {
             s.sex,
             s.student_type,
             s.student_lrn,
-            s.profile_account,
-            s.enrollment_status,
-            e.grade_level   AS en_grade_level,
-            e.section       AS en_section,
-            e.academic_year AS en_academic_year,
-            e.status        AS en_status
-        FROM students s
-        LEFT JOIN enrolled_students e
-               ON e.account_number = s.account_number
-              AND e.id = (
-                    SELECT MAX(e2.id)
-                    FROM enrolled_students e2
-                    WHERE e2.account_number = s.account_number
-              )
-        ORDER BY s.surname, s.first_name
+            s.profile_account
+        FROM enrolled_students e
+        LEFT JOIN students s
+               ON s.account_number = e.account_number
+        WHERE e.academic_year = ?
+          AND e.status = 'Pending'
+        ORDER BY s.surname, s.first_name, e.id DESC
     ");
+    $stmt->execute([$currentYear]);
     $studentsForEnrollment = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (PDOException $e) {
     error_log("final enrollment fetch failed: " . $e->getMessage());
@@ -1308,13 +1305,13 @@ function studentTypeBadgeClass(string $t): string
             </div>
         </section>
 
-        <?php /* FINAL ENROLLMENT — ALL students + grade/section from enrolled_students */ ?>
+        <?php /* FINAL ENROLLMENT — Pending enrolled_students for the current academic year */ ?>
         <?php if (!empty($studentsForEnrollment)): ?>
             <section class="section">
                 <div class="section-head">
                     <div>
                         <h2>Final Enrollment</h2>
-                        <p>Take picture, update LRN, approve enrollment.</p>
+                        <p>Pending enrollments for S.Y. <?php echo htmlspecialchars($currentYear); ?> — approve by capturing a photo and updating the LRN.</p>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="text" class="field-input final-search-input" id="finalSearchInput"
@@ -1337,6 +1334,7 @@ function studentTypeBadgeClass(string $t): string
                                 <th>Grade Level</th>
                                 <th>Section</th>
                                 <th>Type</th>
+                                <th>Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -1354,6 +1352,7 @@ function studentTypeBadgeClass(string $t): string
                                 /* grade_level + section from enrolled_students */
                                 $sGradeLevel = $s['en_grade_level'] ?? '';
                                 $sSection    = $s['en_section'] ?? '';
+                                $sEnStatus   = strtolower(trim((string) ($s['en_status'] ?? '')));
 
                                 /* LRN from students */
                                 $sLrn = trim((string) ($s['student_lrn'] ?? ''));
@@ -1379,6 +1378,19 @@ function studentTypeBadgeClass(string $t): string
                                         </span>
                                     </td>
                                     <td>
+                                        <?php if ($sEnStatus === 'pending'): ?>
+                                            <span class="pending-pill">
+                                                <i class="fas fa-hourglass-half"></i> Pending
+                                            </span>
+                                        <?php elseif ($sEnStatus === 'active'): ?>
+                                            <span class="type-badge type-n">Active</span>
+                                        <?php else: ?>
+                                            <span class="type-badge type-default">
+                                                <?php echo htmlspecialchars($s['en_status'] ?: '—'); ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <button type="button" class="btn btn-primary btn-mini"
                                             onclick="openCameraModal(
                                                 '<?php echo htmlspecialchars($sAccount, ENT_QUOTES); ?>',
@@ -1392,7 +1404,7 @@ function studentTypeBadgeClass(string $t): string
                                 </tr>
                             <?php endforeach; ?>
                             <tr id="finalNoMatchesRow" style="display:none;">
-                                <td colspan="8" class="filter-hint">
+                                <td colspan="9" class="filter-hint">
                                     <i class="fas fa-search" style="margin-right:6px;"></i>
                                     No students match your search.
                                 </td>
