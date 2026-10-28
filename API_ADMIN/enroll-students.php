@@ -142,7 +142,8 @@ function decodeJpegDataUrl(string $dataUrl): ?string
 
 /**
  * Save a JPEG to Students_Profile/{account}.jpg
- * Returns the stored relative path or null on failure.
+ * CHANGED: returns ONLY the filename ({account}.jpg) — no folder prefix.
+ * Returns null on failure.
  */
 function saveStudentProfilePhoto(string $account, string $jpegBytes): ?string
 {
@@ -165,13 +166,16 @@ function saveStudentProfilePhoto(string $account, string $jpegBytes): ?string
         return null;
     }
 
-    $absFile = $absDir . DIRECTORY_SEPARATOR . $account . '.jpg';
+    $fileName = $account . '.jpg';
+    $absFile  = $absDir . DIRECTORY_SEPARATOR . $fileName;
+
     if (@file_put_contents($absFile, $jpegBytes, LOCK_EX) === false) {
         error_log("enroll-students: failed to write {$absFile}");
         return null;
     }
 
-    return 'Students_Profile/' . $account . '.jpg';
+    /* CHANGED: return only the filename, not "Students_Profile/..." */
+    return $fileName;
 }
 
 /**
@@ -242,7 +246,6 @@ if ($action === '' || !in_array($action, $allowedActions, true)) {
      - grade_level     (optional)
      - section         (optional)
      - photo_data      (required; data:image/jpeg;base64,...)
-   NOTE: contact_number was removed.
    ============================================================ */
 if ($action === 'approve_with_capture') {
     $accountNumber = trim((string) ($_POST['account_number'] ?? ''));
@@ -257,7 +260,6 @@ if ($action === 'approve_with_capture') {
         exit;
     }
 
-    /* CHANGED: LRN must be exactly 12 digits */
     if ($lrnInput === '' || !preg_match('/^\d{12}$/', $lrnInput)) {
         setFlash('error', 'LRN must be exactly 12 digits (numbers only).');
         header('Location: ../admin/dashboard.php');
@@ -271,7 +273,7 @@ if ($action === 'approve_with_capture') {
         exit;
     }
 
-    /* Persist the photo to disk */
+    /* Persist the photo to disk — $profilePath is now just "{account}.jpg" */
     $profilePath = saveStudentProfilePhoto($accountNumber, $jpegBytes);
     if ($profilePath === null) {
         setFlash('error', 'Could not save the student photo. Check folder permissions.');
@@ -378,7 +380,7 @@ if ($action === 'approve_with_capture') {
         }
         if ($hasProfileCol) {
             $setParts[] = "profile_account = ?";
-            $params[]   = $profilePath;
+            $params[]   = $profilePath;      // now just "{account}.jpg"
         }
         if ($hasLrnCol) {
             $setParts[] = "lrn = ?";
@@ -388,7 +390,6 @@ if ($action === 'approve_with_capture') {
             $setParts[] = "student_lrn = ?";
             $params[]   = $lrnInput;
         }
-        // CHANGED: contact_number is no longer set here
 
         $params[] = $accountNumber;
 
