@@ -820,7 +820,7 @@ if ($user) {
                             && strcasecmp($profileFile, 'profile-image.jpg') !== 0;
 
                         // Absolute filesystem path to check the file exists on the server
-                        $absProfile = __DIR__ . '/../Students_Profile/' . basename($profileFile);
+                        $absProfile = __DIR__ . 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/' . basename($profileFile);
                         $fileExists = $hasProfile && is_file($absProfile);
 
                         // Public URL (adjust domain/path if the folder is at the web root)
