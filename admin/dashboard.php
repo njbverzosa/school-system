@@ -143,8 +143,9 @@ try {
 }
 
 /* ------------------------------------------------------------
-   FINAL ENROLLMENT — all Pending enrolled_students for the CURRENT
-   academic year, joined to students for name / age / sex / LRN.
+   FINAL ENROLLMENT — only Pending enrolled_students for the current
+   academic year. Active rows are excluded so they only show in
+   "All Students" below.
    ------------------------------------------------------------ */
 $studentsForEnrollment = [];
 try {
@@ -168,38 +169,53 @@ try {
         LEFT JOIN students s
                ON s.account_number = e.account_number
         WHERE e.academic_year = ?
-          AND e.status = 'Pending'
+          AND LOWER(TRIM(e.status)) = 'pending'
         ORDER BY s.surname, s.first_name, e.id DESC
     ");
     $stmt->execute([$currentYear]);
     $studentsForEnrollment = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    /* Extra PHP guard — never show Active rows here even if query changes */
+    $studentsForEnrollment = array_values(array_filter(
+        $studentsForEnrollment,
+        fn($r) => strtolower(trim((string) ($r['en_status'] ?? ''))) === 'pending'
+    ));
 } catch (PDOException $e) {
     error_log("final enrollment fetch failed: " . $e->getMessage());
 }
 
 /* ------------------------------------------------------------
-   ALL STUDENTS — only students with an Active enrolled_students row.
+   ALL STUDENTS — every Active enrolled_students row (all years),
+   joined to students for name / LRN / profile picture.
+   Only the latest Active row per student so no duplicates.
    ------------------------------------------------------------ */
 $enrolledStudents = [];
 try {
     $stmt = $pdo->query("
         SELECT
-            s.account_number,
+            e.id            AS enrollment_id,
+            e.account_number,
+            e.grade_level,
+            e.section,
+            e.academic_year,
+            e.status        AS enrollment_record_status,
             s.first_name,
             s.middle_name,
             s.surname,
             s.student_lrn,
             s.profile_account,
-            s.enrollment_status,
-            e.grade_level,
-            e.section,
-            e.academic_year,
-            e.status AS enrollment_record_status
+            s.enrollment_status
         FROM enrolled_students e
         INNER JOIN students s
                 ON s.account_number = e.account_number
-        WHERE e.status = 'Active'
-        ORDER BY s.surname, s.first_name, e.id DESC
+        WHERE LOWER(TRIM(e.status)) = 'active'
+          AND e.id = (
+                SELECT MAX(e2.id)
+                FROM enrolled_students e2
+                WHERE e2.account_number = e.account_number
+                  AND LOWER(TRIM(e2.status)) = 'active'
+          )
+        ORDER BY s.surname, s.first_name
     ");
     $enrolledStudents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -1349,12 +1365,10 @@ function studentTypeBadgeClass(string $t): string
                                 $sAccount = (string) ($s['account_number'] ?? '');
                                 $sType    = (string) ($s['student_type'] ?? '');
 
-                                /* grade_level + section from enrolled_students */
                                 $sGradeLevel = $s['en_grade_level'] ?? '';
                                 $sSection    = $s['en_section'] ?? '';
                                 $sEnStatus   = strtolower(trim((string) ($s['en_status'] ?? '')));
 
-                                /* LRN from students */
                                 $sLrn = trim((string) ($s['student_lrn'] ?? ''));
                                 ?>
                                 <tr data-name="<?php echo htmlspecialchars(strtolower($sFullName), ENT_QUOTES); ?>">
@@ -1382,8 +1396,6 @@ function studentTypeBadgeClass(string $t): string
                                             <span class="pending-pill">
                                                 <i class="fas fa-hourglass-half"></i> Pending
                                             </span>
-                                        <?php elseif ($sEnStatus === 'active'): ?>
-                                            <span class="type-badge type-n">Active</span>
                                         <?php else: ?>
                                             <span class="type-badge type-default">
                                                 <?php echo htmlspecialchars($s['en_status'] ?: '—'); ?>
@@ -1415,13 +1427,13 @@ function studentTypeBadgeClass(string $t): string
             </section>
         <?php endif; ?>
 
-        <?php /* ALL STUDENTS — only enrolled_students WHERE status = 'Active' */ ?>
+        <?php /* ALL STUDENTS — every Active enrolled_students row with student data */ ?>
         <?php if (!empty($enrolledStudents)): ?>
             <section class="section">
                 <div class="section-head">
                     <div>
                         <h2>All Students</h2>
-                        <p>All students that finished the final enrollment.</p>
+                        <p>All students with an Active enrollment record.</p>
                     </div>
                     <div>
                         <form method="GET" action="dashboard.php" id="gradeFilterForm">
@@ -1454,6 +1466,7 @@ function studentTypeBadgeClass(string $t): string
                                     <th>Grade Level</th>
                                     <th>Section</th>
                                     <th>Academic Year</th>
+                                    <th>Status</th>
                                     <th>ID Picture</th>
                                 </tr>
                             </thead>
@@ -1470,9 +1483,10 @@ function studentTypeBadgeClass(string $t): string
                                     $sLrn = trim((string) ($s['student_lrn'] ?? ''));
 
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
-                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/' . $sPhotoFile : '';
+                                    $sPhotoUrl  = $sPhotoFile !== ''
+                                        ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/' . $sPhotoFile
+                                        : '';
 
-                                    /* Always Active because of WHERE clause, but guard anyway */
                                     $sStatus = trim((string) ($s['enrollment_record_status'] ?? 'Active'));
                                     ?>
                                     <tr>
@@ -1486,6 +1500,11 @@ function studentTypeBadgeClass(string $t): string
                                         <td>Grade <?php echo htmlspecialchars((string) ($s['grade_level'] ?? '—')); ?></td>
                                         <td><?php echo htmlspecialchars((string) ($s['section'] ?? '—')); ?></td>
                                         <td><?php echo htmlspecialchars((string) ($s['academic_year'] ?? '—')); ?></td>
+                                        <td>
+                                            <span class="type-badge type-n">
+                                                <?php echo htmlspecialchars($sStatus); ?>
+                                            </span>
+                                        </td>
                                         <td>
                                             <?php if ($sPhotoUrl !== ''): ?>
                                                 <a href="javascript:void(0);" class="id-photo-link" title="View ID picture"
@@ -1619,7 +1638,6 @@ function studentTypeBadgeClass(string $t): string
             rows.forEach((row) => {
                 const name = row.dataset.name || '';
 
-                // Match if the full name OR any word in the name starts with q
                 const nameStartsWith = name.startsWith(q);
                 const wordMatches    = name.split(/\s+/).some(w => w.startsWith(q));
 
@@ -1644,7 +1662,6 @@ function studentTypeBadgeClass(string $t): string
             input.focus();
         }
 
-        /* Esc clears the search first when it's focused */
         document.addEventListener('keydown', (e) => {
             const input = document.getElementById('finalSearchInput');
             if (e.key === 'Escape' && input && document.activeElement === input) {
@@ -1783,7 +1800,6 @@ function studentTypeBadgeClass(string $t): string
         const cameraStatus = document.getElementById('cameraStatus');
         const cameraStudentInfo = document.getElementById('cameraStudentInfo');
 
-        /* Force LRN input to be numbers-only, max 12 */
         cameraLrnInput.addEventListener('input', () => {
             cameraLrnInput.value = cameraLrnInput.value.replace(/\D+/g, '').slice(0, 12);
         });
@@ -1878,8 +1894,6 @@ function studentTypeBadgeClass(string $t): string
             cameraCanvas.height = h;
 
             const ctx = cameraCanvas.getContext('2d');
-
-            /* Mirror the draw so the captured photo matches the flipped preview */
             ctx.translate(w, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(cameraVideo, 0, 0, w, h);
