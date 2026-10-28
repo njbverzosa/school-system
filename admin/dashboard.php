@@ -1359,7 +1359,7 @@ function studentTypeBadgeClass(string $t): string
                                     $sLrn = trim((string) ($s['student_lrn'] ?? ''));
 
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
-                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
+                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/' . $sPhotoFile : '';
 
                                     /* Always Active because of WHERE clause, but guard anyway */
                                     $sStatus = trim((string) ($s['enrollment_record_status'] ?? 'Active'));
