@@ -1318,7 +1318,7 @@ function studentTypeBadgeClass(string $t): string
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <input type="text" class="field-input final-search-input" id="finalSearchInput"
-                               placeholder="Search by Account #, Name, LRN, Grade, Section, Sex, Type…"
+                               placeholder="Search by name…"
                                autocomplete="off" oninput="filterFinalTable(this.value)">
                         <button type="button" class="btn btn-cancel btn-mini" id="finalSearchClearBtn"
                                 onclick="clearFinalSearch()" style="display:none;">
@@ -1355,22 +1355,10 @@ function studentTypeBadgeClass(string $t): string
                                 $sGradeLevel = $s['en_grade_level'] ?? '';
                                 $sSection    = $s['en_section'] ?? '';
 
-                                /* Pending state */
-                                $isPendingRow = (strtolower((string) ($s['en_status'] ?? '')) === 'pending');
-
-                                /* LRN + photo from students */
+                                /* LRN from students */
                                 $sLrn = trim((string) ($s['student_lrn'] ?? ''));
                                 ?>
-                                <tr
-                                    data-account="<?php echo htmlspecialchars(strtolower($sAccount), ENT_QUOTES); ?>"
-                                    data-name="<?php echo htmlspecialchars(strtolower($sFullName), ENT_QUOTES); ?>"
-                                    data-lrn="<?php echo htmlspecialchars(strtolower($sLrn), ENT_QUOTES); ?>"
-                                    data-grade="<?php echo htmlspecialchars(strtolower((string) $sGradeLevel), ENT_QUOTES); ?>"
-                                    data-section="<?php echo htmlspecialchars(strtolower((string) $sSection), ENT_QUOTES); ?>"
-                                    data-sex="<?php echo htmlspecialchars(strtolower((string) ($s['sex'] ?? '')), ENT_QUOTES); ?>"
-                                    data-type="<?php echo htmlspecialchars(strtolower($sType), ENT_QUOTES); ?>"
-                                    data-typename="<?php echo htmlspecialchars(strtolower(studentTypeLabel($sType)), ENT_QUOTES); ?>"
-                                >
+                                <tr data-name="<?php echo htmlspecialchars(strtolower($sFullName), ENT_QUOTES); ?>">
                                     <td><?php echo htmlspecialchars($sAccount ?: '—'); ?></td>
                                     <td>
                                         <div class="name-block">
@@ -1602,7 +1590,7 @@ function studentTypeBadgeClass(string $t): string
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        /* ── FINAL ENROLLMENT SEARCH ── */
+        /* ── FINAL ENROLLMENT SEARCH (name only) ── */
         function filterFinalTable(term) {
             const table    = document.getElementById('finalEnrollmentTable');
             const clearBtn = document.getElementById('finalSearchClearBtn');
@@ -1617,30 +1605,13 @@ function studentTypeBadgeClass(string $t): string
             let visibleCount = 0;
 
             rows.forEach((row) => {
-                if (q === '') {
-                    row.style.display = '';
-                    visibleCount++;
-                    return;
-                }
+                const name = row.dataset.name || '';
 
-                const fields = [
-                    row.dataset.account  || '',
-                    row.dataset.name     || '',
-                    row.dataset.lrn      || '',
-                    row.dataset.grade    || '',
-                    row.dataset.section  || '',
-                    row.dataset.sex      || '',
-                    row.dataset.type     || '',
-                    row.dataset.typename || '',
-                ];
+                // Match if the full name OR any word in the name starts with q
+                const nameStartsWith = name.startsWith(q);
+                const wordMatches    = name.split(/\s+/).some(w => w.startsWith(q));
 
-                const prefixMatch = fields.some(f => f.startsWith(q));
-
-                const wordMatch = (row.dataset.name || '')
-                    .split(/\s+/)
-                    .some(w => w.startsWith(q));
-
-                if (prefixMatch || wordMatch) {
+                if (q === '' || nameStartsWith || wordMatches) {
                     row.style.display = '';
                     visibleCount++;
                 } else {
