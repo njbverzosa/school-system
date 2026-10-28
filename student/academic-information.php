@@ -680,7 +680,7 @@ unset($_SESSION['flash']['just_enrolled']);
             margin: 30px 0 60px;
         }
 
-        /* CHANGED: Welcome card (Pending / New Student / Transferee) */
+        /* Welcome card (Pending / New Student / Transferee) */
         .welcome-card {
             display: flex;
             flex-direction: column;
@@ -805,13 +805,15 @@ unset($_SESSION['flash']['just_enrolled']);
             font-style: italic;
         }
 
-        /* Status pill */
+        /* ── Status pill — no background, Facebook-style verified check ── */
         .status-pill {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 3px 12px;
-            border-radius: 999px;
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            border: none;
             font-family: 'Inter', sans-serif;
             font-size: 12.5px;
             font-weight: 700;
@@ -819,16 +821,40 @@ unset($_SESSION['flash']['just_enrolled']);
             line-height: 1.6;
         }
 
-        .status-pill.pending {
-            background: #fef3c7;
-            color: #92400e;
-            border: 1px solid #fde68a;
+        /* The "verified" check — blue circle + white check */
+        .status-pill .verified-badge {
+            display: inline-grid;
+            place-items: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #1877f2;           /* Facebook blue */
+            color: #ffffff;
+            font-size: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(24, 119, 242, 0.35);
         }
 
+        .status-pill .verified-badge i {
+            font-size: 9px;
+            line-height: 1;
+        }
+
+        /* Color the text per state (no background/border) */
         .status-pill.enrolled {
-            background: #dcfce7;
             color: #166534;
-            border: 1px solid #bbf7d0;
+        }
+
+        .status-pill.pending {
+            color: #92400e;
+        }
+
+        /* Pending uses an hourglass, not the blue check */
+        .status-pill.pending .verified-badge {
+            background: transparent;
+            color: #b45309;
+            box-shadow: none;
+            font-size: 14px;
         }
 
         /* SUBJECTS */
@@ -1266,7 +1292,6 @@ unset($_SESSION['flash']['just_enrolled']);
     <main class="container">
         <?php if ($isLoggedIn && $user): ?>
             <?php if ($isPending): ?>
-                <?php /* CHANGED: Pending state → show welcome card only, hide enrollment details + subjects */ ?>
                 <section class="panel">
                     <div class="welcome-card is-closed">
                         <div class="welcome-icon"
@@ -1341,7 +1366,9 @@ unset($_SESSION['flash']['just_enrolled']);
                             <span class="dash">-</span>
                             <span class="value">
                                 <span class="status-pill enrolled">
-                                    <i class="fas fa-circle-check"></i>
+                                    <span class="verified-badge" aria-label="Verified">
+                                        <i class="fas fa-check"></i>
+                                    </span>
                                     <?php echo htmlspecialchars($displayStatus ?: 'Enrolled'); ?>
                                 </span>
                             </span>
