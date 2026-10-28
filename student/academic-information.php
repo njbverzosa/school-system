@@ -828,11 +828,10 @@ unset($_SESSION['flash']['just_enrolled']);
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #1877f2;           /* Facebook blue */
+            background: #5ad7e7;           /* Facebook blue */
             color: #ffffff;
             font-size: 10px;
             flex-shrink: 0;
-            box-shadow: 0 1px 2px rgba(24, 119, 242, 0.35);
         }
 
         .status-pill .verified-badge i {
