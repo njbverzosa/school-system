@@ -687,6 +687,7 @@ function studentTypeBadgeClass(string $t): string
             overflow: hidden;
             border: 1px solid var(--line);
             transition: transform .15s, box-shadow .15s, border-color .15s;
+            cursor: zoom-in;
         }
 
         .id-photo-link:hover {
@@ -707,6 +708,70 @@ function studentTypeBadgeClass(string $t): string
             font-size: 11.5px;
             color: var(--muted);
             font-style: italic;
+        }
+
+        /* ── Photo Lightbox ── */
+        .lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10001;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.22s ease, visibility 0.22s ease;
+        }
+
+        .lightbox-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-img {
+            max-width: 92vw;
+            max-height: 88vh;
+            object-fit: contain;
+            border-radius: 10px;
+            background: #fff;
+            padding: 6px;
+            box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.65);
+            transform: scale(0.94);
+            transition: transform 0.22s ease;
+            cursor: default;
+        }
+
+        .lightbox-overlay.open .lightbox-img {
+            transform: scale(1);
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: background .15s, transform .15s;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.28);
+        }
+
+        .lightbox-close:active {
+            transform: scale(.94);
         }
 
         .btn {
@@ -1116,6 +1181,16 @@ function studentTypeBadgeClass(string $t): string
             .section-head h2 { font-size: 16px; }
             .filter-select { width: 100%; }
             .camera-actions { flex-direction: column; }
+            .lightbox-close {
+                top: 12px;
+                right: 14px;
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            .lightbox-img {
+                padding: 4px;
+            }
         }
 
         @media (max-width: 400px) {
@@ -1238,6 +1313,7 @@ function studentTypeBadgeClass(string $t): string
                                 <th>Grade Level</th>
                                 <th>Section</th>
                                 <th>Type</th>
+                                <th>ID Picture</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -1284,7 +1360,19 @@ function studentTypeBadgeClass(string $t): string
                                             <?php echo htmlspecialchars(studentTypeLabel($sType)); ?>
                                         </span>
                                     </td>
-                                  
+                                    <td>
+                                        <?php if ($sPhotoUrl !== ''): ?>
+                                            <a href="javascript:void(0);" class="id-photo-link" title="View ID picture"
+                                               onclick="openLightbox('<?php echo htmlspecialchars($sPhotoUrl, ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($sFullName ?: $sAccount), ENT_QUOTES); ?>')">
+                                                <img src="<?php echo htmlspecialchars($sPhotoUrl); ?>"
+                                                     alt="ID picture of <?php echo htmlspecialchars($sFullName ?: $sAccount); ?>"
+                                                     class="id-photo-thumb"
+                                                     onerror="this.parentElement.innerHTML='<span class=&quot;id-photo-missing&quot;>No photo</span>';">
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="id-photo-missing">No photo</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>
                                         <button type="button" class="btn btn-primary btn-mini"
                                             onclick="openCameraModal(
@@ -1359,7 +1447,7 @@ function studentTypeBadgeClass(string $t): string
                                     $sLrn = trim((string) ($s['student_lrn'] ?? ''));
 
                                     $sPhotoFile = trim((string) ($s['profile_account'] ?? ''));
-                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Students_Profile/' . $sPhotoFile : '';
+                                    $sPhotoUrl  = $sPhotoFile !== '' ? 'Students_Profile/' . $sPhotoFile : '';
 
                                     /* Always Active because of WHERE clause, but guard anyway */
                                     $sStatus = trim((string) ($s['enrollment_record_status'] ?? 'Active'));
@@ -1375,11 +1463,10 @@ function studentTypeBadgeClass(string $t): string
                                         <td>Grade <?php echo htmlspecialchars((string) ($s['grade_level'] ?? '—')); ?></td>
                                         <td><?php echo htmlspecialchars((string) ($s['section'] ?? '—')); ?></td>
                                         <td><?php echo htmlspecialchars((string) ($s['academic_year'] ?? '—')); ?></td>
-                                        
                                         <td>
                                             <?php if ($sPhotoUrl !== ''): ?>
-                                                <a href="<?php echo htmlspecialchars($sPhotoUrl); ?>" target="_blank" rel="noopener"
-                                                   class="id-photo-link" title="View ID picture">
+                                                <a href="javascript:void(0);" class="id-photo-link" title="View ID picture"
+                                                   onclick="openLightbox('<?php echo htmlspecialchars($sPhotoUrl, ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($sFullName ?: $sAccount), ENT_QUOTES); ?>')">
                                                     <img src="<?php echo htmlspecialchars($sPhotoUrl); ?>"
                                                          alt="ID picture of <?php echo htmlspecialchars($sFullName ?: $sAccount); ?>"
                                                          class="id-photo-thumb"
@@ -1464,6 +1551,14 @@ function studentTypeBadgeClass(string $t): string
         </div>
     </div>
 
+    <!-- Lightbox for viewing ID pictures -->
+    <div class="lightbox-overlay" id="photoLightbox" onclick="closeLightbox(event)">
+        <button type="button" class="lightbox-close" onclick="closeLightbox(event)" aria-label="Close">
+            <i class="fas fa-times"></i>
+        </button>
+        <img class="lightbox-img" id="lightboxImg" src="" alt="ID picture preview" />
+    </div>
+
     <script>
         /* ── NAVBAR ── */
         const navToggle = document.getElementById('navToggle');
@@ -1483,6 +1578,42 @@ function studentTypeBadgeClass(string $t): string
         });
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+        /* ── PHOTO LIGHTBOX ── */
+        const photoLightbox = document.getElementById('photoLightbox');
+        const lightboxImg   = document.getElementById('lightboxImg');
+
+        function openLightbox(src, alt) {
+            if (!src) return;
+            lightboxImg.src = src;
+            lightboxImg.alt = alt ? ('ID picture of ' + alt) : 'ID picture preview';
+            photoLightbox.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox(e) {
+            /* Don't close if the click was on the image itself */
+            if (e && e.target && e.target === lightboxImg) return;
+            photoLightbox.classList.remove('open');
+            lightboxImg.removeAttribute('src');
+            document.body.style.overflow = '';
+        }
+
+        /* Clicking the image shouldn't close the lightbox */
+        lightboxImg.addEventListener('click', (e) => e.stopPropagation());
+
+        /* Backdrop click closes */
+        photoLightbox.addEventListener('click', (e) => {
+            if (e.target === photoLightbox) closeLightbox(e);
+        });
+
+        /* Esc closes lightbox first, then other modals */
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && photoLightbox.classList.contains('open')) {
+                closeLightbox();
+                return;
+            }
+        });
 
         /* ── ENROLLMENT TOGGLE MODAL ── */
         let currentToggleAction = '';
