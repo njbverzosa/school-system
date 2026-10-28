@@ -1921,50 +1921,42 @@ try {
             }
         }
 
-        /* MOBILE (Centered Logo, Text, and Burger) */
+        /* MOBILE (Slight center nudge for logo, text, and burger) */
         @media (max-width: 820px) {
             .nav-links {
                 display: none;
             }
 
-            /* Center everything vertically and horizontally */
             .nav-inner {
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                padding: 16px 0;
-                gap: 12px;
-                min-height: auto;
+                padding: 12px 0;
+                gap: 10px;
+                /* Slightly nudges the items towards the center */
+                padding-left: 10%; 
+                padding-right: 10%;
             }
 
             .logo {
                 gap: 10px;
-                flex: none; /* Removed flex: 1 to prevent pushing layout */
-                justify-content: center;
+                min-width: 0;
+                flex: 1;
             }
 
             .logo-mark {
-                width: 50px;
-                height: 50px;
+                width: 46px;
+                height: 46px;
                 border-radius: 5px;
                 padding: 4px;
             }
 
             .logo-text b {
-                font-size: 18px;
-                max-width: none;
-                text-align: center;
+                font-size: 16px;
+                max-width: 150px;
             }
 
             .logo-text span {
-                font-size: 11px;
-                max-width: none;
+                font-size: 10px;
+                max-width: 150px;
                 letter-spacing: .08em;
-                text-align: center;
-            }
-
-            .nav-actions {
-                margin-top: 4px;
             }
 
             .nav-actions .btn-login,
@@ -1974,16 +1966,16 @@ try {
 
             .nav-toggle {
                 display: grid;
-                width: 46px;
-                height: 46px;
-                font-size: 20px;
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
             }
 
             .mobile-menu {
-                top: 135px; /* Adjusted top since nav bar is taller now */
+                top: 68px;
                 left: 12px;
                 right: 12px;
-                max-height: calc(100vh - 150px);
+                max-height: calc(100vh - 80px);
             }
 
             .hero {
@@ -2282,12 +2274,12 @@ try {
             }
 
             .nav-inner {
-                padding: 12px 0;
+                padding: 10px 0;
             }
 
             .logo-mark {
-                width: 42px;
-                height: 42px;
+                width: 38px;
+                height: 38px;
                 padding: 4px;
             }
 
@@ -2296,20 +2288,26 @@ try {
             }
 
             .logo-text b {
-                font-size: 16px;
+                font-size: 13.5px;
+                max-width: 130px;
             }
 
             .logo-text span {
-                font-size: 10px;
+                font-size: 9px;
+                max-width: 130px;
+            }
+
+            .nav-actions {
+                gap: 6px;
             }
 
             .nav-toggle {
-                width: 42px;
-                height: 42px;
+                width: 38px;
+                height: 38px;
             }
 
             .mobile-menu {
-                top: 125px;
+                top: 62px;
                 left: 10px;
                 right: 10px;
             }
@@ -2380,18 +2378,20 @@ try {
         /* TINY */
         @media (max-width: 380px) {
             .logo-mark {
-                width: 36px;
-                height: 36px;
+                width: 34px;
+                height: 34px;
                 padding: 3px;
                 border-radius: 10px;
             }
 
             .logo-text b {
-                font-size: 14px;
+                font-size: 12.5px;
+                max-width: 110px;
             }
 
             .logo-text span {
-                font-size: 9px;
+                font-size: 8.5px;
+                max-width: 110px;
             }
 
             .hero-brand-row {
