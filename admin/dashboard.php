@@ -1350,7 +1350,6 @@ function studentTypeBadgeClass(string $t): string
                                 <th>Grade Level</th>
                                 <th>Section</th>
                                 <th>Type</th>
-                                <th>Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -1391,17 +1390,7 @@ function studentTypeBadgeClass(string $t): string
                                             <?php echo htmlspecialchars(studentTypeLabel($sType)); ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <?php if ($sEnStatus === 'pending'): ?>
-                                            <span class="pending-pill">
-                                                <i class="fas fa-hourglass-half"></i> Pending
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="type-badge type-default">
-                                                <?php echo htmlspecialchars($s['en_status'] ?: '—'); ?>
-                                            </span>
-                                        <?php endif; ?>
-                                    </td>
+                               
                                     <td>
                                         <button type="button" class="btn btn-primary btn-mini"
                                             onclick="openCameraModal(
@@ -1466,7 +1455,6 @@ function studentTypeBadgeClass(string $t): string
                                     <th>Grade Level</th>
                                     <th>Section</th>
                                     <th>Academic Year</th>
-                                    <th>Status</th>
                                     <th>ID Picture</th>
                                 </tr>
                             </thead>
@@ -1500,11 +1488,6 @@ function studentTypeBadgeClass(string $t): string
                                         <td>Grade <?php echo htmlspecialchars((string) ($s['grade_level'] ?? '—')); ?></td>
                                         <td><?php echo htmlspecialchars((string) ($s['section'] ?? '—')); ?></td>
                                         <td><?php echo htmlspecialchars((string) ($s['academic_year'] ?? '—')); ?></td>
-                                        <td>
-                                            <span class="type-badge type-n">
-                                                <?php echo htmlspecialchars($sStatus); ?>
-                                            </span>
-                                        </td>
                                         <td>
                                             <?php if ($sPhotoUrl !== ''): ?>
                                                 <a href="javascript:void(0);" class="id-photo-link" title="View ID picture"
