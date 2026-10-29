@@ -2782,7 +2782,7 @@ try {
                         </div>
 
                         <div class="form-group">
-                            <label for="age">Edad <span class="req">*</span></label>
+                            <label for="age">Edad</label>
                             <input type="number" id="age" name="age" placeholder="—" min="1" max="120" readonly
                                 title="Awtomatikong kinakalkula mula sa petsa ng kapanganakan">
                             <div class="err-msg" id="ageErr">Ilagay muna ang petsa ng kapanganakan.</div>
