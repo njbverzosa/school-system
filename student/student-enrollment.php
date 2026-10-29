@@ -1511,7 +1511,7 @@ unset($_SESSION['flash']['just_enrolled']);
                 <span class="page-label">STUDENT ENROLLMENT</span>
 
                 <div class="nav-actions">
-                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
+                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false" style="margin-right: 10px;">
                         <i class="fas fa-bars"></i>
                     </button>
 

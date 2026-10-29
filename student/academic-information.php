@@ -1361,7 +1361,7 @@ unset($_SESSION['flash']['just_enrolled']);
                 <span class="page-label">ACADEMIC INFORMATION </span>
 
                 <div class="nav-actions">
-                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
+                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false" style="margin-right: 10px;">
                         <i class="fas fa-bars"></i>
                     </button>
 
@@ -1405,6 +1405,12 @@ unset($_SESSION['flash']['just_enrolled']);
                     <!-- ENROLLMENT DETAILS -->
                     <div class="enrolled-summary">
                         <h3>Enrollment Details</h3>
+
+                        <div class="summary-row">
+                            <span class="label">Fullname</span>
+                            <span class="dash">-</span>
+                            <span class="value"><?php echo htmlspecialchars($displayName); ?></span>
+                        </div>
 
                         <div class="summary-row">
                             <span class="label">Account Number</span>

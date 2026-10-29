@@ -973,7 +973,7 @@ if ($user) {
                 <span class="page-label">MASTER FILE (INFORMATION)</span>
 
                 <div class="nav-actions">
-                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
+                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false" style="margin-right: 10px;">
                         <i class="fas fa-bars"></i>
                     </button>
 

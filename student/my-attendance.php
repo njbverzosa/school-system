@@ -303,7 +303,7 @@ function formatAttendanceDisplay(array $row): string
             overflow-y: scroll;
         }
 
-        /* ── PAGE BACKGROUND (matches academic-information.php) ── */
+        /* ── PAGE BACKGROUND ── */
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: #1f2327;
@@ -578,7 +578,7 @@ function formatAttendanceDisplay(array $row): string
             color: var(--primary);
         }
 
-        /* ── PANEL — semi-transparent dark blue card with blur ── */
+        /* ── PANEL ── */
         .panel {
             background: rgba(8, 40, 95, .72);
             border: 1px solid rgba(255, 255, 255, .3);
@@ -804,6 +804,44 @@ function formatAttendanceDisplay(array $row): string
             word-break: break-all;
         }
 
+        /* GLOBAL WHITE TEXT */
+        body,
+        body :where(h1, h2, h3, h4, h5, h6, p, span, div, a, button, label, strong, b, small, th, td, li, i, em, code) {
+            color: #ffffff !important;
+        }
+
+        /* Nav dropdown readable */
+        .nav-dropdown {
+            background: #08285f;
+            border-color: rgba(255, 255, 255, .22);
+        }
+
+        .nav-dropdown-head {
+            color: #ffffff !important;
+            border-bottom-color: rgba(255, 255, 255, .22);
+        }
+
+        .nav-dropdown a:hover,
+        .nav-dropdown button:hover {
+            background: rgba(255, 255, 255, .14);
+            color: #ffffff !important;
+        }
+
+        .nav-dropdown a i,
+        .nav-dropdown button i {
+            color: #ffffff !important;
+        }
+
+        .nav-toggle {
+            color: #ffffff !important;
+            background: #123b78;
+        }
+
+        .nav-toggle:hover {
+            background: #1d4e89;
+            color: #ffffff !important;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 1024px) {
             .nav-inner {
@@ -982,8 +1020,8 @@ function formatAttendanceDisplay(array $row): string
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="../Images/campuslink-logo-navy.png" alt="Eguia National High School logo"
-                        onerror="this.style.display='none'">
+                    <img src="../Images/campuslink-logo-navy.png"
+                        alt="Eguia National High School logo" onerror="this.style.display='none'">
                 </div>
                 <div class="logo-divider" aria-hidden="true"></div>
                 <div class="logo-text">
@@ -996,7 +1034,7 @@ function formatAttendanceDisplay(array $row): string
                 <span class="page-label">MY ATTENDANCE</span>
 
                 <div class="nav-actions">
-                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
+                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false" style="margin-right: 10px;">
                         <i class="fas fa-bars"></i>
                     </button>
 
@@ -1044,6 +1082,13 @@ function formatAttendanceDisplay(array $row): string
                         </span>
                     </div>
 
+                    <?php if ($totalRecords > 0): ?>
+                        <span class="count-pill">
+                            <i class="fas fa-list-check"></i>
+                            <?php echo $totalRecords; ?>
+                            record<?php echo $totalRecords === 1 ? '' : 's'; ?>
+                        </span>
+                    <?php endif; ?>
                 </div>
 
                 <?php if ($attendanceErr !== null): ?>
@@ -1204,6 +1249,7 @@ function formatAttendanceDisplay(array $row): string
             }, true);
         })();
     </script>
+
 </body>
 
 </html>
