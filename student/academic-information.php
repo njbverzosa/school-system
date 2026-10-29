@@ -55,6 +55,7 @@ function buildFullName(string $first, string $middle, string $last): string
 
 function resolveTeacherNameFromJoin(array $row): string
 {
+    // 1. Get the full name from the teachers table (JOINed)
     $name = buildFullName(
         (string) ($row['teacher_first'] ?? ''),
         (string) ($row['teacher_middle'] ?? ''),
@@ -65,7 +66,14 @@ function resolveTeacherNameFromJoin(array $row): string
         return $name;
     }
 
-    return trim((string) ($row['adviser'] ?? ''));
+    // 2. Fallback to the 'surname' column in assigned_teachers if JOIN fails
+    $surname = trim((string) ($row['surname'] ?? ''));
+    if ($surname !== '') {
+        return $surname;
+    }
+
+    // 3. Last resort: return '—'
+    return '—';
 }
 
 function fetchTeacherNameByAccount(PDO $pdo, string $account): string
@@ -181,6 +189,9 @@ if (!empty($_SESSION['account_number']) && is_string($_SESSION['account_number']
     }
 }
 
+/* ------------------------------------------------------------
+   DISPLAY NAME
+   ------------------------------------------------------------ */
 $displayName = '';
 if ($user) {
     $displayName = buildFullName(
@@ -311,6 +322,7 @@ if (
         $sql = "
             SELECT
                 at.adviser,
+                at.surname,
                 t.first_name  AS teacher_first,
                 t.middle_name AS teacher_middle,
                 t.surname     AS teacher_last
@@ -355,6 +367,7 @@ if (
                 at.id,
                 at.subject,
                 at.adviser,
+                at.surname,
                 at.grade_level,
                 at.section,
                 at.days,
@@ -782,12 +795,14 @@ unset($_SESSION['flash']['just_enrolled']);
             letter-spacing: .02em;
         }
 
-        /* ENROLLMENT DETAILS */
+        /* ENROLLMENT DETAILS (with slight blur background) */
         .enrolled-summary {
             padding: 24px 20px;
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: linear-gradient(135deg, #f8fafc, #eef2ff);
+            background: rgba(8, 40, 95, .72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -849,18 +864,17 @@ unset($_SESSION['flash']['just_enrolled']);
             padding: 3px 12px;
             border-radius: 999px;
             font-family: 'Inter', sans-serif;
-            font-size: 12.5px;
+            font-size: 13px;
             font-weight: 700;
             letter-spacing: .02em;
             line-height: 1.6;
         }
 
+
         .status-pill.pending {
             background: #fef3c7;
             color: #92400e;
-            border: 1px solid #fde68a;
         }
-
 
         /* SUBJECTS */
         .subjects-section {
@@ -895,31 +909,31 @@ unset($_SESSION['flash']['just_enrolled']);
         .subjects-count {
             font-size: 12px;
             color: var(--muted);
-            border: 1px solid var(--line);
             padding: 3px 10px;
-            border-radius: 999px;
+            border-radius: 5px;
             font-weight: 600;
         }
 
-        /* Card container for My Subjects — same background as Enrollment Details */
+        /* Card container for My Subjects (with slight blur background) */
         .subjects-table-container {
             width: 100%;
             padding: 24px 20px;
             border-radius: var(--radius);
             border: 1px solid rgba(255, 255, 255, .3);
             background: rgba(8, 40, 95, .72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .35);
         }
 
-        /* Inner scroll wrapper — holds the faded whitesmoke surface */
+        /* Inner scroll wrapper — TRANSPARENT */
         .subjects-table-container .subjects-wrap {
             width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             border-radius: 8px;
-            border: 1px solid rgba(0, 0, 0, .05);
-            /* Slightly faded whitesmoke background */
-            background: rgba(245, 245, 245, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
         }
 
         /* Table — transparent */
@@ -930,39 +944,45 @@ unset($_SESSION['flash']['just_enrolled']);
             background: transparent;
         }
 
-        /* Faded header background */
+        /* Header */
         table.subjects thead {
-            background: rgba(226, 232, 240, 0.6);
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Faded body text and borders */
+        /* Text and borders — WHITE */
         table.subjects th,
         table.subjects td {
             padding: 12px 16px;
             text-align: left;
-            border-bottom: 1px solid rgba(215, 221, 229, 0.5);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            color: rgba(15, 23, 42, 0.65) !important;
+            color: #ffffff !important;
         }
 
-        /* Faded header text */
         table.subjects th {
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .08em;
-            color: rgba(51, 65, 85, 0.6) !important;
+            color: rgba(255, 255, 255, 0.7) !important;
         }
 
         table.subjects tbody tr:last-child td {
             border-bottom: none;
         }
 
-        /* Faded hover effect */
-        table.subjects tbody tr:hover td {
-            background: rgba(238, 241, 245, 0.5);
+
+
+        /* Override specific text colors in the table to white */
+        .subjects-table-container table.subjects,
+        .subjects-table-container table.subjects :where(th, td, span, a, b, strong, i, em, code, p, div) {
+            color: #ffffff !important;
+        }
+
+        .subjects-table-container table.subjects th {
+            color: rgba(255, 255, 255, 0.7) !important;
         }
 
         .empty-subjects {
@@ -1080,11 +1100,6 @@ unset($_SESSION['flash']['just_enrolled']);
             color: #ffffff !important;
         }
 
-        .enrolled-summary {
-            background: rgba(8, 40, 95, .72);
-            border-color: rgba(255, 255, 255, .3);
-        }
-
         .subjects-count,
         .welcome-card .account-box {
             background: rgba(8, 40, 95, .78);
@@ -1094,16 +1109,6 @@ unset($_SESSION['flash']['just_enrolled']);
         .status-pill.pending,
         .status-pill.enrolled {
             color: greenyellow !important;
-        }
-
-        /* Faded whitesmoke table text — overrides the global white !important */
-        .subjects-table-container table.subjects,
-        .subjects-table-container table.subjects :where(th, td, span, a, b, strong, i, em, code, p, div) {
-            color: rgba(15, 23, 42, 0.65) !important;
-        }
-
-        .subjects-table-container table.subjects th {
-            color: rgba(51, 65, 85, 0.6) !important;
         }
 
         /* RESPONSIVE */
@@ -1268,6 +1273,7 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         @media (max-width: 400px) {
+
             .nav::before,
             .nav::after {
                 width: 150px;
@@ -1292,10 +1298,43 @@ unset($_SESSION['flash']['just_enrolled']);
                 padding: 14px 10px;
             }
         }
+
+        /* ── DEVTOOLS ACTIVE: swap page background to inspect.png ── */
+        body.devtools-active {
+            background-color: #000 !important;
+            background-image: url('../Images/inspect.png') !important;
+            background-position: center center !important;
+            background-repeat: no-repeat !important;
+            background-size: contain !important;
+            background-attachment: fixed !important;
+            overflow: hidden !important;
+        }
+
+        body.devtools-active>* {
+            visibility: hidden !important;
+        }
+
+        @media (max-width: 768px) {
+            body.devtools-active {
+                background-size: contain !important;
+                background-position: center center !important;
+                background-attachment: scroll !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body.devtools-active {
+                background-size: contain !important;
+                background-position: center center !important;
+                background-attachment: scroll !important;
+                padding: 16px !important;
+            }
+        }
     </style>
 </head>
 
 <body>
+
     <?php if ($justEnrolled): ?>
         <div class="spinner-overlay" id="enrollSpinner">
             <div class="spinner"></div>
@@ -1313,13 +1352,13 @@ unset($_SESSION['flash']['just_enrolled']);
                 </div>
                 <div class="logo-divider" aria-hidden="true"></div>
                 <div class="logo-text">
-                    <b>Campus Link</b>
+                    <b>CampusLink</b>
                     <span class="school-name">Eguia National High School</span>
                 </div>
             </a>
 
             <div class="nav-right">
-                <span class="page-label">Student Portal</span>
+                <span class="page-label">ACADEMIC INFORMATION </span>
 
                 <div class="nav-actions">
                     <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
@@ -1359,25 +1398,7 @@ unset($_SESSION['flash']['just_enrolled']);
     <main class="container">
         <?php if ($isLoggedIn && $user): ?>
             <?php if ($isPending): ?>
-                <section class="panel">
-                    <div class="welcome-card is-closed">
-                        <div class="welcome-icon"
-                            style="color: #b45309; background: #fef3c7; box-shadow: 0 12px 26px -14px rgba(245, 158, 11, 0.45);">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <h2>Enrollment Pending — Visit the Registrar's Office</h2>
-                        <p>
-                            Your enrollment request has been submitted and is currently
-                            <strong>pending approval</strong>. To complete your enrollment,
-                            please proceed to the <strong>Registrar's Office</strong> and bring
-                            your required documents for verification and approval.
-                        </p>
-                        <div class="account-box">
-                            <i class="fas fa-id-card"></i>
-                            Account No. <b><?php echo htmlspecialchars($user['account_number']); ?></b>
-                        </div>
-                    </div>
-                </section>
+
             <?php else: ?>
                 <section class="panel">
 
@@ -1443,13 +1464,8 @@ unset($_SESSION['flash']['just_enrolled']);
                     <!-- MY SUBJECTS -->
                     <div class="subjects-section">
                         <div class="subjects-head">
-                            <h3>
-                                <i class="fas fa-book-open"></i>
-                                My Subjects
-                            </h3>
                             <span class="subjects-count">
-                                <?php echo count($studentSubjects); ?>
-                                subject<?php echo count($studentSubjects) === 1 ? '' : 's'; ?>
+                                My Subject<?php echo count($studentSubjects) === 1 ? '' : 's'; ?>
                             </span>
                         </div>
 
@@ -1565,7 +1581,61 @@ unset($_SESSION['flash']['just_enrolled']);
                 }, 500);
             }, 5000);
         }
+
+        /* ── DEVTOOLS DETECTION: swap to inspect.png background ── */
+        (function () {
+            'use strict';
+
+            let active = false;
+
+            function setActive(state) {
+                if (state === active) return;
+                active = state;
+                document.body.classList.toggle('devtools-active', state);
+            }
+
+            function detectByDebugger() {
+                const t0 = performance.now();
+                // eslint-disable-next-line no-debugger
+                debugger;
+                const t1 = performance.now();
+                return (t1 - t0) > 100;
+            }
+
+            function detectBySize() {
+                const w = window.outerWidth - window.innerWidth;
+                const h = window.outerHeight - window.innerHeight;
+                if (window.outerWidth === 0 && window.outerHeight === 0) return false;
+                return (w > 160 || h > 160);
+            }
+
+            function tick() {
+                setActive(detectByDebugger() || detectBySize());
+            }
+
+            tick();
+
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(tick, 150);
+            });
+
+            setInterval(tick, 800);
+
+            document.addEventListener('keydown', (e) => {
+                const k = (e.key || '').toLowerCase();
+                if (
+                    e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k)) ||
+                    (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(k))
+                ) {
+                    setTimeout(tick, 200);
+                }
+            }, true);
+        })();
     </script>
+
 </body>
 
 </html>

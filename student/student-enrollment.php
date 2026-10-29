@@ -1,5 +1,6 @@
 <?php
 // student/student-enrollment.php — Eguia National High School Pages
+
 require_once __DIR__ . '/../DB_Conn/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
@@ -95,6 +96,9 @@ if (!empty($_SESSION['account_number']) && is_string($_SESSION['account_number']
     }
 }
 
+/* ------------------------------------------------------------
+   DISPLAY NAME
+   ------------------------------------------------------------ */
 $displayName = '';
 if ($user) {
     $displayName = trim(
@@ -112,15 +116,13 @@ $studentType = $user ? strtoupper(trim((string) ($user['student_type'] ?? ''))) 
 
 $enrollmentAccess = $user ? (int) ($user['enrollment_access'] ?? 0) : 0;
 
-$isPending  = ($enrollmentStatus === 'pending');
+$isPending = ($enrollmentStatus === 'pending');
 $isEnrolled = ($enrollmentStatus === 'enrolled');
-$canEnroll  = (!$isPending && !$isEnrolled && $enrollmentAccess === 1);
-$isClosed   = (!$isPending && !$isEnrolled && $enrollmentAccess === 0);
+$canEnroll = (!$isPending && !$isEnrolled && $enrollmentAccess === 1);
+$isClosed = (!$isPending && !$isEnrolled && $enrollmentAccess === 0);
 
 /* ------------------------------------------------------------
-   GUARD: If the student is already fully enrolled, redirect
-   them to academic-information.php — this page is only for
-   students who still have to enroll, are pending, or are closed.
+   If the student is already fully enrolled, redirect away.
    ------------------------------------------------------------ */
 if ($isLoggedIn && $user && $isEnrolled) {
     header('Location: academic-information.php');
@@ -129,7 +131,7 @@ if ($isLoggedIn && $user && $isEnrolled) {
 
 $isTransferee = ($studentType === 'T');
 $isNewStudent = ($studentType === 'N');
-$isOldStudent  = ($studentType === 'O');
+$isOldStudent = ($studentType === 'O');
 
 /* ------------------------------------------------------------
    RESOLVE THE STUDENT'S GRADE FOR THE SECTION PICKER
@@ -175,7 +177,13 @@ unset($_SESSION['flash']['just_enrolled']);
             --shadow-md: 0 14px 34px -14px rgba(15, 23, 42, .22);
         }
 
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         html {
             scroll-behavior: smooth;
@@ -183,7 +191,8 @@ unset($_SESSION['flash']['just_enrolled']);
             height: 100%;
         }
 
-        html, body {
+        html,
+        body {
             width: 100%;
             min-height: 100vh;
         }
@@ -218,10 +227,20 @@ unset($_SESSION['flash']['just_enrolled']);
             }
         }
 
-        img, svg { display: block; }
-        a { text-decoration: none; color: inherit; }
+        img,
+        svg {
+            display: block;
+        }
 
-        h1, h2, h3, h4 {
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
             font-family: 'Poppins', sans-serif;
             line-height: 1.18;
             letter-spacing: -.02em;
@@ -242,7 +261,7 @@ unset($_SESSION['flash']['just_enrolled']);
             background: rgba(255, 255, 255, .82);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border-bottom: 1px solid rgba(255,255,255,.45);
+            border-bottom: 1px solid rgba(255, 255, 255, .45);
         }
 
         .nav-inner {
@@ -271,7 +290,12 @@ unset($_SESSION['flash']['just_enrolled']);
             place-items: center;
         }
 
-        .logo-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .logo-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
 
         .logo-divider {
             width: 1px;
@@ -313,7 +337,12 @@ unset($_SESSION['flash']['just_enrolled']);
             max-width: 480px;
         }
 
-        .nav-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
 
         .page-label {
             display: inline-flex;
@@ -349,8 +378,14 @@ unset($_SESSION['flash']['just_enrolled']);
             transition: background .18s, color .18s, transform .18s;
         }
 
-        .nav-toggle:hover { background: #eef2ff; color: var(--primary-dark); }
-        .nav-toggle:active { transform: scale(.96); }
+        .nav-toggle:hover {
+            background: #eef2ff;
+            color: var(--primary-dark);
+        }
+
+        .nav-toggle:active {
+            transform: scale(.96);
+        }
 
         .nav-dropdown {
             position: absolute;
@@ -370,7 +405,11 @@ unset($_SESSION['flash']['just_enrolled']);
             transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
         }
 
-        .nav-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+        .nav-dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
 
         .nav-dropdown-head {
             padding: 10px 14px 8px;
@@ -403,7 +442,10 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         .nav-dropdown a:hover,
-        .nav-dropdown button:hover { background: #eef2ff; color: var(--primary-dark); }
+        .nav-dropdown button:hover {
+            background: #eef2ff;
+            color: var(--primary-dark);
+        }
 
         .nav-dropdown a i,
         .nav-dropdown button i {
@@ -461,7 +503,7 @@ unset($_SESSION['flash']['just_enrolled']);
             border-radius: 12px;
             background: linear-gradient(135deg, rgba(239, 246, 255, .92), rgba(219, 234, 254, .88));
             border: 1px solid rgba(147, 197, 253, .78);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
         }
 
         .welcome-card.is-closed {
@@ -542,7 +584,7 @@ unset($_SESSION['flash']['just_enrolled']);
             letter-spacing: .04em;
         }
 
-        .welcome-card > .account-box + .account-box {
+        .welcome-card>.account-box+.account-box {
             margin-left: 8px;
         }
 
@@ -651,7 +693,10 @@ unset($_SESSION['flash']['just_enrolled']);
             transition: opacity .4s ease;
         }
 
-        .spinner-overlay.hidden { opacity: 0; pointer-events: none; }
+        .spinner-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
 
         .spinner {
             width: 64px;
@@ -663,7 +708,11 @@ unset($_SESSION['flash']['just_enrolled']);
             animation: spin 0.9s linear infinite;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         .spinner-overlay .spinner-title {
             font-family: 'Poppins', sans-serif;
@@ -682,500 +731,764 @@ unset($_SESSION['flash']['just_enrolled']);
 
         /* RESPONSIVE */
         @media (max-width: 1024px) {
-            .nav-inner { padding: 12px 0; gap: 14px; min-height: 92px; }
-            .nav-toggle { width: 46px; height: 46px; font-size: 19px; }
-            .logo { gap: 16px; }
-            .logo-mark { width: 68px; height: 68px; }
-            .logo-divider { height: 46px; }
-            .logo-text b { font-size: 23px; max-width: 380px; }
-            .logo-text .school-name { font-size: 12.5px; max-width: 380px; }
-            .page-label { font-size: 11.5px; padding: 7px 14px; }
+            .nav-inner {
+                padding: 12px 0;
+                gap: 14px;
+                min-height: 92px;
+            }
+
+            .nav-toggle {
+                width: 46px;
+                height: 46px;
+                font-size: 19px;
+            }
+
+            .logo {
+                gap: 16px;
+            }
+
+            .logo-mark {
+                width: 68px;
+                height: 68px;
+            }
+
+            .logo-divider {
+                height: 46px;
+            }
+
+            .logo-text b {
+                font-size: 23px;
+                max-width: 380px;
+            }
+
+            .logo-text .school-name {
+                font-size: 12.5px;
+                max-width: 380px;
+            }
+
+            .page-label {
+                font-size: 11.5px;
+                padding: 7px 14px;
+            }
         }
 
         @media (max-width: 820px) {
-            .nav-inner { padding: 10px 0; gap: 10px; min-height: 76px; }
-            .logo { gap: 12px; flex: 1; min-width: 0; }
-            .logo-mark { width: 56px; height: 56px; }
-            .logo-divider { height: 40px; }
-            .logo-text b { font-size: 19px; max-width: 240px; }
-            .logo-text .school-name { font-size: 11px; max-width: 240px; }
-            .nav-toggle { width: 44px; height: 44px; font-size: 18px; }
-            .page-label { font-size: 10.5px; padding: 6px 12px; gap: 6px; }
+            .nav-inner {
+                padding: 10px 0;
+                gap: 10px;
+                min-height: 76px;
+            }
+
+            .logo {
+                gap: 12px;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .logo-mark {
+                width: 56px;
+                height: 56px;
+            }
+
+            .logo-divider {
+                height: 40px;
+            }
+
+            .logo-text b {
+                font-size: 19px;
+                max-width: 240px;
+            }
+
+            .logo-text .school-name {
+                font-size: 11px;
+                max-width: 240px;
+            }
+
+            .nav-toggle {
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+
+            .page-label {
+                font-size: 10.5px;
+                padding: 6px 12px;
+                gap: 6px;
+            }
         }
 
         @media (max-width: 640px) {
-            .container { padding: 0 16px; }
-            .nav-inner { padding: 10px 0; gap: 8px; min-height: 66px; }
-            .logo { gap: 10px; }
-            .logo-mark { width: 46px; height: 46px; }
-            .logo-divider { display: none; }
-            .logo-text b { font-size: 16px; max-width: 160px; }
-            .logo-text .school-name { font-size: 10px; max-width: 160px; }
-            .nav-toggle { width: 42px; height: 42px; font-size: 17px; }
-            .page-label { display: none; }
-            .nav-dropdown { width: 250px; }
+            .container {
+                padding: 0 16px;
+            }
+
+            .nav-inner {
+                padding: 10px 0;
+                gap: 8px;
+                min-height: 66px;
+            }
+
+            .logo {
+                gap: 10px;
+            }
+
+            .logo-mark {
+                width: 46px;
+                height: 46px;
+            }
+
+            .logo-divider {
+                display: none;
+            }
+
+            .logo-text b {
+                font-size: 16px;
+                max-width: 160px;
+            }
+
+            .logo-text .school-name {
+                font-size: 10px;
+                max-width: 160px;
+            }
+
+            .nav-toggle {
+                width: 42px;
+                height: 42px;
+                font-size: 17px;
+            }
+
+            .page-label {
+                display: none;
+            }
+
+            .nav-dropdown {
+                width: 250px;
+            }
+
             .panel {
                 padding: 14px;
                 margin: 16px 0 32px;
                 min-height: calc(100vh - 170px);
                 border-radius: 14px;
             }
+
             .welcome-card {
                 padding: 34px 16px;
                 border-radius: 10px;
             }
-            .welcome-card h2 { font-size: 20px; }
-            .welcome-card p { font-size: 14px; }
-            .welcome-card .welcome-icon { width: 62px; height: 62px; font-size: 26px; margin-bottom: 18px; }
-            .welcome-actions .btn { width: 100%; }
-            .section-picker { max-width: 100%; }
+
+            .welcome-card h2 {
+                font-size: 20px;
+            }
+
+            .welcome-card p {
+                font-size: 14px;
+            }
+
+            .welcome-card .welcome-icon {
+                width: 62px;
+                height: 62px;
+                font-size: 26px;
+                margin-bottom: 18px;
+            }
+
+            .welcome-actions .btn {
+                width: 100%;
+            }
+
+            .section-picker {
+                max-width: 100%;
+            }
+
             .welcome-card .account-box {
                 display: flex;
                 width: 100%;
                 justify-content: center;
                 margin: 0 0 10px !important;
             }
-            .spinner { width: 52px; height: 52px; border-width: 4px; }
-            .spinner-overlay .spinner-title { font-size: 16px; }
-            .spinner-overlay .spinner-sub { font-size: 12.5px; }
+
+            .spinner {
+                width: 52px;
+                height: 52px;
+                border-width: 4px;
+            }
+
+            .spinner-overlay .spinner-title {
+                font-size: 16px;
+            }
+
+            .spinner-overlay .spinner-sub {
+                font-size: 12.5px;
+            }
         }
 
         @media (max-width: 400px) {
-            .logo-mark { width: 40px; height: 40px; }
-            .logo-text b { font-size: 14px; max-width: 130px; }
-            .logo-text .school-name { font-size: 9px; max-width: 130px; }
+            .logo-mark {
+                width: 40px;
+                height: 40px;
+            }
+
+            .logo-text b {
+                font-size: 14px;
+                max-width: 130px;
+            }
+
+            .logo-text .school-name {
+                font-size: 9px;
+                max-width: 130px;
+            }
         }
 
-/* RESPONSIVE SCHOOL HALLWAY BACKGROUND */
-html, body { min-height: 100%; }
+        /* RESPONSIVE SCHOOL HALLWAY BACKGROUND */
+        html,
+        body {
+            min-height: 100%;
+        }
 
-body {
-    position: relative;
-    isolation: isolate;
-    background-color: #0a1a33;
-    background-image: url("../Images/school-hallway.jpg");
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-}
+        body {
+            position: relative;
+            isolation: isolate;
+            background-color: #0a1a33;
+            background-image: url("../Images/school-hallway.jpg");
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
 
-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-        linear-gradient(
-            180deg,
-            rgba(4, 18, 42, .42) 0%,
-            rgba(4, 18, 42, .24) 45%,
-            rgba(4, 18, 42, .50) 100%
-        );
-    pointer-events: none;
-}
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background:
+                linear-gradient(180deg,
+                    rgba(4, 18, 42, .42) 0%,
+                    rgba(4, 18, 42, .24) 45%,
+                    rgba(4, 18, 42, .50) 100%);
+            pointer-events: none;
+        }
 
-@media (max-width: 768px) {
-    body {
-        background-attachment: scroll;
-        background-size: cover;
-        background-position: center center;
-        min-height: 100svh;
-    }
-    body::before { position: absolute; min-height: 100%; }
-}
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll;
+                background-size: cover;
+                background-position: center center;
+                min-height: 100svh;
+            }
 
-@media (max-width: 430px) {
-    body { background-position: 50% center; background-size: cover; }
-}
+            body::before {
+                position: absolute;
+                min-height: 100%;
+            }
+        }
 
-@media (max-height: 500px) and (orientation: landscape) {
-    body { background-position: center 42%; }
-}
+        @media (max-width: 430px) {
+            body {
+                background-position: 50% center;
+                background-size: cover;
+            }
+        }
 
-/* MODERN RESPONSIVE BUTTONS */
-.btn {
-    position: relative;
-    min-height: 50px;
-    padding: 14px 28px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, .28);
-    font-family: 'Inter', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: .01em;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    cursor: pointer;
-    overflow: hidden;
-    transition:
-        transform .2s ease,
-        box-shadow .2s ease,
-        filter .2s ease,
-        background .2s ease;
-    -webkit-tap-highlight-color: transparent;
-}
+        @media (max-height: 500px) and (orientation: landscape) {
+            body {
+                background-position: center 42%;
+            }
+        }
 
-.btn::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -110%;
-    width: 65%;
-    height: 100%;
-    background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
-    transform: skewX(-18deg);
-    transition: left .55s ease;
-}
+        /* MODERN RESPONSIVE BUTTONS */
+        .btn {
+            position: relative;
+            min-height: 50px;
+            padding: 14px 28px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .28);
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: .01em;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            overflow: hidden;
+            transition:
+                transform .2s ease,
+                box-shadow .2s ease,
+                filter .2s ease,
+                background .2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-.btn:hover::before { left: 140%; }
-.btn i { font-size: 16px; transition: transform .2s ease; }
+        .btn::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -110%;
+            width: 65%;
+            height: 100%;
+            background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .35), transparent);
+            transform: skewX(-18deg);
+            transition: left .55s ease;
+        }
 
-.btn-primary {
-    color: #fff;
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
-    border-color: rgba(147, 197, 253, .45);
-    box-shadow:
-        0 12px 24px rgba(29, 78, 216, .35),
-        inset 0 1px 0 rgba(255,255,255,.20);
-}
+        .btn:hover::before {
+            left: 140%;
+        }
 
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-3px);
-    filter: brightness(1.08);
-    box-shadow:
-        0 17px 30px rgba(29, 78, 216, .45),
-        0 0 0 4px rgba(59,130,246,.14);
-}
+        .btn i {
+            font-size: 16px;
+            transition: transform .2s ease;
+        }
 
-.btn-primary:hover:not(:disabled) i { transform: translateX(2px) scale(1.06); }
+        .btn-primary {
+            color: #fff;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
+            border-color: rgba(147, 197, 253, .45);
+            box-shadow:
+                0 12px 24px rgba(29, 78, 216, .35),
+                inset 0 1px 0 rgba(255, 255, 255, .20);
+        }
 
-.btn-primary:active:not(:disabled) {
-    transform: translateY(0) scale(.98);
-    box-shadow: 0 8px 16px rgba(29,78,216,.32);
-}
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-3px);
+            filter: brightness(1.08);
+            box-shadow:
+                0 17px 30px rgba(29, 78, 216, .45),
+                0 0 0 4px rgba(59, 130, 246, .14);
+        }
 
-.btn-primary:disabled {
-    opacity: .6;
-    cursor: not-allowed;
-    transform: none;
-}
+        .btn-primary:hover:not(:disabled) i {
+            transform: translateX(2px) scale(1.06);
+        }
 
-@media (max-width: 640px) {
-    .welcome-actions { width: 100%; padding: 0 2px; }
-    .welcome-actions .btn {
-        width: 100%;
-        min-height: 54px;
-        padding: 15px 20px;
-        border-radius: 15px;
-        font-size: 15px;
-    }
-    .welcome-actions .btn i { font-size: 17px; }
-}
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0) scale(.98);
+            box-shadow: 0 8px 16px rgba(29, 78, 216, .32);
+        }
 
-@media (max-width: 380px) {
-    .welcome-actions .btn { min-height: 52px; font-size: 14px; }
-}
+        .btn-primary:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-/* CAMPUSLINK DARK HEADER */
-.nav {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: linear-gradient(180deg, #06275f 0%, #031a43 100%);
-    border-bottom: 1px solid rgba(255,255,255,.14);
-    box-shadow: 0 8px 24px rgba(0, 15, 45, .28);
-    overflow: visible;
-}
+        @media (max-width: 640px) {
+            .welcome-actions {
+                width: 100%;
+                padding: 0 2px;
+            }
 
-.nav::before, .nav::after {
-    content: "";
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 210px;
-    pointer-events: none;
-    z-index: 0;
-}
+            .welcome-actions .btn {
+                width: 100%;
+                min-height: 54px;
+                padding: 15px 20px;
+                border-radius: 15px;
+                font-size: 15px;
+            }
 
-.nav::before {
-    left: 0;
-    background: linear-gradient(35deg,
-        transparent 0 35%,
-        #8b1232 35% 47%,
-        #f1bd2f 47% 53%,
-        #174fc1 53% 66%,
-        transparent 66%);
-}
+            .welcome-actions .btn i {
+                font-size: 17px;
+            }
+        }
 
-.nav::after {
-    right: 0;
-    transform: scaleX(-1);
-    background: linear-gradient(35deg,
-        transparent 0 35%,
-        #8b1232 35% 47%,
-        #f1bd2f 47% 53%,
-        #174fc1 53% 66%,
-        transparent 66%);
-}
+        @media (max-width: 380px) {
+            .welcome-actions .btn {
+                min-height: 52px;
+                font-size: 14px;
+            }
+        }
 
-.nav-inner { position: relative; z-index: 2; min-height: 100px; padding: 10px 0; }
-.logo { gap: 14px; align-items: center; }
-.logo-mark { width: 108px; height: 76px; flex-shrink: 0; }
-.logo-mark img { width: 100%; height: 100%; object-fit: contain; }
-.logo-divider {
-    display: block;
-    width: 1px;
-    height: 48px;
-    background: rgba(255,255,255,.42);
-    flex-shrink: 0;
-}
-.campus-link-title {
-    display: block;
-    color: #fff;
-    font-family: 'Poppins', sans-serif;
-    font-size: 24px;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: .02em;
-    white-space: nowrap;
-    text-transform: uppercase;
-    text-shadow: 0 2px 8px rgba(0,0,0,.2);
-}
-.logo-text { display: none !important; }
-.page-label {
-    color: #dce7ff;
-    border: 0;
-    background: transparent;
-    font-size: 13px;
-    letter-spacing: .12em;
-    padding: 8px 14px;
-}
-.nav-toggle {
-    width: 48px; height: 48px; border-radius: 12px;
-    background: rgba(255,255,255,.96);
-    border: 1px solid rgba(255,255,255,.7);
-    color: #0f172a;
-    box-shadow: 0 8px 18px rgba(0,0,0,.15);
-}
-.nav-toggle:hover { background:#fff; color:#174fc1; }
-.nav { overflow: visible !important; }
-.nav-dropdown { z-index: 1000 !important; }
+        /* CAMPUSLINK DARK HEADER */
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(180deg, #06275f 0%, #031a43 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, .14);
+            box-shadow: 0 8px 24px rgba(0, 15, 45, .28);
+            overflow: visible;
+        }
 
-@media (max-width: 640px) {
-    .nav-inner { min-height: 68px; padding: 8px 0; }
-    .logo { gap: 9px; }
-    .logo-mark { width: 78px; height: 54px; }
-    .logo-divider { height: 34px; }
-    .campus-link-title { font-size: 16px; letter-spacing: .01em; }
-    .page-label { display: none; }
-    .nav-toggle { width: 44px; height: 44px; }
-    .nav::before, .nav::after { width: 100px; }
-}
+        .nav::before,
+        .nav::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 210px;
+            pointer-events: none;
+            z-index: 0;
+        }
 
-@media (max-width: 480px) {
-    .campus-link-title { font-size: 14px; }
-    .logo-mark { width: 70px; height: 48px; }
-}
+        .nav::before {
+            left: 0;
+            background: linear-gradient(35deg,
+                    transparent 0 35%,
+                    #8b1232 35% 47%,
+                    #f1bd2f 47% 53%,
+                    #174fc1 53% 66%,
+                    transparent 66%);
+        }
 
-@media (max-width: 380px) {
-    .logo { gap: 7px; }
-    .logo-mark { width: 62px; height: 44px; }
-    .logo-divider { height: 30px; }
-    .campus-link-title { font-size: 12px; }
-}
+        .nav::after {
+            right: 0;
+            transform: scaleX(-1);
+            background: linear-gradient(35deg,
+                    transparent 0 35%,
+                    #8b1232 35% 47%,
+                    #f1bd2f 47% 53%,
+                    #174fc1 53% 66%,
+                    transparent 66%);
+        }
 
-/* FINAL REQUEST: remove the outer/content cards */
-main.container {
-    width: 100%;
-    max-width: none;
-    padding: 0 24px;
-}
+        .nav-inner {
+            position: relative;
+            z-index: 2;
+            min-height: 100px;
+            padding: 10px 0;
+        }
 
-.panel,
-.welcome-card,
-.welcome-card.is-closed,
-.welcome-card.is-transferee,
-.welcome-card.is-new {
-    width: 100%;
-    max-width: none;
-    min-height: 0;
-    margin: 0;
-    padding: 42px 20px;
-    background: transparent !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-}
+        .logo {
+            gap: 14px;
+            align-items: center;
+        }
 
-.welcome-card h2,
-.welcome-card p,
-.welcome-card strong,
-.welcome-card,
-.welcome-card .account-box,
-.section-picker label {
-    color: #fff !important;
-}
+        .logo-mark {
+            width: 108px;
+            height: 76px;
+            flex-shrink: 0;
+        }
 
-.welcome-card p {
-    max-width: 680px;
-}
+        .logo-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
 
-.welcome-card .account-box {
-    display: inline-flex;
-    background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    padding: 10px 12px;
-}
+        .logo-divider {
+            display: block;
+            width: 1px;
+            height: 48px;
+            background: rgba(255, 255, 255, .42);
+            flex-shrink: 0;
+        }
 
-.section-picker select {
-    color: #fff !important;
-    background-color: rgba(3, 26, 67, .78) !important;
-    border-color: rgba(255,255,255,.55);
-}
+        .campus-link-title {
+            display: block;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: .02em;
+            white-space: nowrap;
+            text-transform: uppercase;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+        }
 
-.section-picker select option {
-    color: #fff;
-    background: #06275f;
-}
+        .logo-text {
+            display: none !important;
+        }
 
-.welcome-card .welcome-icon {
-    background: rgba(255,255,255,.96);
-}
+        .page-label {
+            color: #dce7ff;
+            border: 0;
+            background: transparent;
+            font-size: 13px;
+            letter-spacing: .12em;
+            padding: 8px 14px;
+        }
 
-.welcome-card .welcome-icon i {
-    color: #1d4ed8 !important;
-}
+        .nav-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, .96);
+            border: 1px solid rgba(255, 255, 255, .7);
+            color: #0f172a;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .15);
+        }
 
-/* Registrar notice block (shown after enrollment success) */
-.registrar-notice {
-    max-width: 720px;
-    margin: 22px auto 0;
-    text-align: left;
-    background: rgba(255, 255, 255, 0.10);
-    border: 1px solid rgba(255, 255, 255, 0.30);
-    border-radius: 12px;
-    padding: 20px 22px;
-    color: #fff;
-    font-size: 14.5px;
-    line-height: 1.75;
-}
+        .nav-toggle:hover {
+            background: #fff;
+            color: #174fc1;
+        }
 
-.registrar-notice h3 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 16px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #fff;
-}
+        .nav {
+            overflow: visible !important;
+        }
 
-.registrar-notice h3 i {
-    color: #fbbf24;
-    font-size: 18px;
-}
+        .nav-dropdown {
+            z-index: 1000 !important;
+        }
 
-.registrar-notice ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
+        @media (max-width: 640px) {
+            .nav-inner {
+                min-height: 68px;
+                padding: 8px 0;
+            }
 
-.registrar-notice li {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 6px 0;
-    color: #fff;
-}
+            .logo {
+                gap: 9px;
+            }
 
-.registrar-notice li i {
-    color: #34d399;
-    font-size: 14px;
-    margin-top: 4px;
-    flex-shrink: 0;
-}
+            .logo-mark {
+                width: 78px;
+                height: 54px;
+            }
 
-@media (max-width: 640px) {
-    .registrar-notice {
-        padding: 16px 16px;
-        font-size: 13.5px;
-        line-height: 1.7;
-    }
-    .registrar-notice h3 { font-size: 15px; }
-}
+            .logo-divider {
+                height: 34px;
+            }
 
-/* White typography across the page */
-body,
-main,
-main h1,
-main h2,
-main h3,
-main p,
-main span,
-main label,
-main strong,
-main b,
-main i {
-    color: #fff;
-}
+            .campus-link-title {
+                font-size: 16px;
+                letter-spacing: .01em;
+            }
 
-.nav-dropdown,
-.nav-dropdown-head,
-.nav-dropdown a,
-.nav-dropdown button,
-.nav-dropdown .nav-empty-note,
-.nav-dropdown .nav-empty-note span {
-    color: #fff;
-}
+            .page-label {
+                display: none;
+            }
 
-.nav-dropdown {
-    background: #06275f;
-    border-color: rgba(255,255,255,.18);
-}
+            .nav-toggle {
+                width: 44px;
+                height: 44px;
+            }
 
-.nav-dropdown-head {
-    border-bottom-color: rgba(255,255,255,.18);
-}
+            .nav::before,
+            .nav::after {
+                width: 100px;
+            }
+        }
 
-.nav-dropdown a:hover,
-.nav-dropdown button:hover {
-    background: rgba(255,255,255,.12);
-    color: #fff;
-}
+        @media (max-width: 480px) {
+            .campus-link-title {
+                font-size: 14px;
+            }
 
-.nav-dropdown a i,
-.nav-dropdown button i,
-.nav-dropdown .nav-empty-note i {
-    color: #fff;
-}
+            .logo-mark {
+                width: 70px;
+                height: 48px;
+            }
+        }
 
-.nav-empty-note {
-    background: rgba(255,255,255,.08);
-    border-color: rgba(255,255,255,.3);
-}
+        @media (max-width: 380px) {
+            .logo {
+                gap: 7px;
+            }
 
-@media (max-width: 640px) {
-    main.container { padding: 0 16px; }
-    .panel,
-    .welcome-card,
-    .welcome-card.is-closed,
-    .welcome-card.is-transferee,
-    .welcome-card.is-new {
-        padding: 32px 8px;
-        margin: 0;
-    }
-}
+            .logo-mark {
+                width: 62px;
+                height: 44px;
+            }
 
+            .logo-divider {
+                height: 30px;
+            }
+
+            .campus-link-title {
+                font-size: 12px;
+            }
+        }
+
+        /* FINAL REQUEST: remove the outer/content cards */
+        main.container {
+            width: 100%;
+            max-width: none;
+            padding: 0 24px;
+        }
+
+        .panel,
+        .welcome-card,
+        .welcome-card.is-closed,
+        .welcome-card.is-transferee,
+        .welcome-card.is-new {
+            width: 100%;
+            max-width: none;
+            min-height: 0;
+            margin: 0;
+            padding: 42px 20px;
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+        }
+
+        .welcome-card h2,
+        .welcome-card p,
+        .welcome-card strong,
+        .welcome-card,
+        .welcome-card .account-box,
+        .section-picker label {
+            color: #fff !important;
+        }
+
+        .welcome-card p {
+            max-width: 680px;
+        }
+
+        .welcome-card .account-box {
+            display: inline-flex;
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            padding: 10px 12px;
+        }
+
+        .section-picker select {
+            color: #fff !important;
+            background-color: rgba(3, 26, 67, .78) !important;
+            border-color: rgba(255, 255, 255, .55);
+        }
+
+        .section-picker select option {
+            color: #fff;
+            background: #06275f;
+        }
+
+        .welcome-card .welcome-icon {
+            background: rgba(255, 255, 255, .96);
+        }
+
+        .welcome-card .welcome-icon i {
+            color: #1d4ed8 !important;
+        }
+
+        /* Registrar notice block (shown after enrollment success) */
+        .registrar-notice {
+            max-width: 720px;
+            margin: 22px auto 0;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.30);
+            border-radius: 12px;
+            padding: 20px 22px;
+            color: #fff;
+            font-size: 14.5px;
+            line-height: 1.75;
+        }
+
+        .registrar-notice h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .registrar-notice h3 i {
+            color: #fbbf24;
+            font-size: 18px;
+        }
+
+        .registrar-notice ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .registrar-notice li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 6px 0;
+            color: #fff;
+        }
+
+        .registrar-notice li i {
+            color: #34d399;
+            font-size: 14px;
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 640px) {
+            .registrar-notice {
+                padding: 16px 16px;
+                font-size: 13.5px;
+                line-height: 1.7;
+            }
+
+            .registrar-notice h3 {
+                font-size: 15px;
+            }
+        }
+
+        /* White typography across the page */
+        body,
+        main,
+        main h1,
+        main h2,
+        main h3,
+        main p,
+        main span,
+        main label,
+        main strong,
+        main b,
+        main i {
+            color: #fff;
+        }
+
+        .nav-dropdown,
+        .nav-dropdown-head,
+        .nav-dropdown a,
+        .nav-dropdown button,
+        .nav-dropdown .nav-empty-note,
+        .nav-dropdown .nav-empty-note span {
+            color: #fff;
+        }
+
+        .nav-dropdown {
+            background: #06275f;
+            border-color: rgba(255, 255, 255, .18);
+        }
+
+        .nav-dropdown-head {
+            border-bottom-color: rgba(255, 255, 255, .18);
+        }
+
+        .nav-dropdown a:hover,
+        .nav-dropdown button:hover {
+            background: rgba(255, 255, 255, .12);
+            color: #fff;
+        }
+
+        .nav-dropdown a i,
+        .nav-dropdown button i,
+        .nav-dropdown .nav-empty-note i {
+            color: #fff;
+        }
+
+        .nav-empty-note {
+            background: rgba(255, 255, 255, .08);
+            border-color: rgba(255, 255, 255, .3);
+        }
+
+        @media (max-width: 640px) {
+            main.container {
+                padding: 0 16px;
+            }
+
+            .panel,
+            .welcome-card,
+            .welcome-card.is-closed,
+            .welcome-card.is-transferee,
+            .welcome-card.is-new {
+                padding: 32px 8px;
+                margin: 0;
+            }
+        }
     </style>
 </head>
 
 <body>
+
     <?php if ($justEnrolled): ?>
         <div class="spinner-overlay" id="enrollSpinner">
             <div class="spinner"></div>
@@ -1188,15 +1501,14 @@ main i {
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="../Images/campuslink-logo.png"
-                        alt="CampusLink Logo" onerror="this.style.display='none'">
+                    <img src="../Images/campuslink-logo.png" alt="CampusLink Logo" onerror="this.style.display='none'">
                 </div>
                 <span class="logo-divider" aria-hidden="true"></span>
-                <span class="campus-link-title">CAMPUS LINK</span>
+                <span class="campus-link-title">CampusLink</span>
             </a>
 
             <div class="nav-right">
-                <span class="page-label">Student Portal</span>
+                <span class="page-label">STUDENT ENROLLMENT</span>
 
                 <div class="nav-actions">
                     <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
@@ -1231,10 +1543,7 @@ main i {
             <section class="panel">
 
                 <?php if ($isPending): ?>
-                    <!-- ============================================================
-                         ENROLLMENT_STATUS = "PENDING"
-                         → Show Registrar instructions (applies to N, O, and T alike)
-                         ============================================================ -->
+                    <!-- ENROLLMENT_STATUS = "PENDING" -->
                     <div class="welcome-card">
                         <div class="welcome-icon">
                             <i class="fas fa-hourglass-half"></i>
@@ -1286,10 +1595,7 @@ main i {
                     </div>
 
                 <?php elseif ($canEnroll): ?>
-                    <!-- ============================================================
-                         ENROLLMENT_ACCESS = 1 (and not pending / not enrolled)
-                         → Show the enrollment card with section picker + button
-                         ============================================================ -->
+                    <!-- ENROLLMENT_ACCESS = 1 (and not pending / not enrolled) -->
                     <div class="welcome-card <?php echo $isTransferee ? 'is-transferee' : ($isNewStudent ? 'is-new' : ''); ?>">
                         <div class="welcome-icon">
                             <?php if ($isTransferee): ?>
@@ -1355,10 +1661,7 @@ main i {
                     </div>
 
                 <?php elseif ($isClosed): ?>
-                    <!-- ============================================================
-                         ENROLLMENT_ACCESS = 0 (and not pending / not enrolled)
-                         → Show "Enrollment is Currently Closed"
-                         ============================================================ -->
+                    <!-- ENROLLMENT_ACCESS = 0 (and not pending / not enrolled) -->
                     <div class="welcome-card is-closed">
                         <div class="welcome-icon">
                             <i class="fas fa-clock"></i>
@@ -1455,6 +1758,8 @@ main i {
             }, 5000);
         }
     </script>
+
+    <?php navMarkEntry(); ?>
 </body>
 
 </html>

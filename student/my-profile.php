@@ -56,6 +56,9 @@ if (!empty($_SESSION['account_number']) && is_string($_SESSION['account_number']
     }
 }
 
+/* ------------------------------------------------------------
+   DISPLAY NAME
+   ------------------------------------------------------------ */
 $displayName = '';
 if ($user) {
     $displayName = trim(
@@ -110,13 +113,22 @@ if ($user) {
             overflow-y: scroll;
         }
 
+        /* ── PAGE BACKGROUND ── */
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
+            background-color: #1f2327;
+            background-image:
+                linear-gradient(rgba(15, 23, 42, .18), rgba(15, 23, 42, .18)),
+                url('../Images/Colorful_Back_to_School_Stationery_Border.png');
+            background-size: cover;
+            background-position: center top;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            min-height: 100vh;
         }
 
         img,
@@ -145,40 +157,79 @@ if ($user) {
             padding: 0 24px;
         }
 
-        /* NAV */
+        /* ── NAV ── */
         .nav {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(255, 255, 255, .96);
-            backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--line);
+            background: #08285f;
+            border-bottom: 0;
+            overflow: visible;
+            isolation: isolate;
+        }
+
+        .nav::before,
+        .nav::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 250px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .nav::before {
+            left: -90px;
+            background:
+                linear-gradient(55deg,
+                    transparent 0 24%,
+                    #9b1536 24% 34%,
+                    #f8c324 34% 42%,
+                    #2058c8 42% 56%,
+                    transparent 56% 100%);
+        }
+
+        .nav::after {
+            right: -90px;
+            transform: scaleX(-1);
+            background:
+                linear-gradient(55deg,
+                    transparent 0 24%,
+                    #9b1536 24% 34%,
+                    #f8c324 34% 42%,
+                    #2058c8 42% 56%,
+                    transparent 56% 100%);
         }
 
         .nav-inner {
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 18px;
-            padding: 14px 0;
-            min-height: 108px;
+            padding: 10px 0;
+            min-height: 120px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 22px;
             min-width: 0;
             text-decoration: none;
             flex-shrink: 1;
         }
 
         .logo-mark {
-            width: 80px;
-            height: 80px;
+            width: 191px;
+            height: 107px;
             flex-shrink: 0;
             display: grid;
             place-items: center;
+            overflow: hidden;
+            background: #08285f;
+            border-radius: 2px;
         }
 
         .logo-mark img {
@@ -189,10 +240,7 @@ if ($user) {
         }
 
         .logo-divider {
-            width: 1px;
-            height: 54px;
-            background: var(--line);
-            flex-shrink: 0;
+            display: none;
         }
 
         .logo-text {
@@ -201,37 +249,28 @@ if ($user) {
             justify-content: center;
             line-height: 1.1;
             min-width: 0;
-            gap: 3px;
+            gap: 0;
         }
 
         .logo-text b {
             font-family: 'Poppins', sans-serif;
-            font-size: 26px;
+            font-size: 30px;
             font-weight: 800;
-            color: var(--text);
-            letter-spacing: -.02em;
+            color: #fff;
+            letter-spacing: .01em;
             line-height: 1.1;
+            text-transform: uppercase;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 480px;
         }
 
         .logo-text .school-name {
-            font-size: 13.5px;
-            font-weight: 500;
-            color: var(--muted);
-            line-height: 1.25;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 480px;
+            display: none;
         }
 
         .nav-right {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 18px;
             flex-shrink: 0;
         }
 
@@ -239,12 +278,12 @@ if ($user) {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 12.5px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: .1em;
-            color: var(--primary-dark);
-            padding: 8px 16px;
+            letter-spacing: .08em;
+            color: #fff;
+            padding: 8px 10px;
             white-space: nowrap;
         }
 
@@ -253,25 +292,27 @@ if ($user) {
             align-items: center;
             position: relative;
             flex-shrink: 0;
+            z-index: 201;
         }
 
         .nav-toggle {
             display: grid;
-            width: 48px;
-            height: 48px;
-            border-radius: var(--radius);
-            background: #f1f5f9;
-            border: 1px solid var(--line);
-            color: var(--text);
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            background: #f8fafc;
+            border: 0;
+            color: #0f172a;
             cursor: pointer;
             place-items: center;
-            font-size: 20px;
+            font-size: 24px;
             transition: background .18s, color .18s, transform .18s;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
         }
 
         .nav-toggle:hover {
-            background: #eef2ff;
-            color: var(--primary-dark);
+            background: #fff;
+            color: #08285f;
         }
 
         .nav-toggle:active {
@@ -280,13 +321,13 @@ if ($user) {
 
         .nav-dropdown {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 12px);
             right: 0;
             left: auto;
             width: 280px;
             background: #fff;
             border: 1px solid var(--line);
-            border-radius: var(--radius);
+            border-radius: 12px;
             box-shadow: var(--shadow-md);
             padding: 8px;
             z-index: 200;
@@ -319,7 +360,7 @@ if ($user) {
             align-items: center;
             gap: 12px;
             padding: 12px 14px;
-            border-radius: var(--radius);
+            border-radius: 8px;
             color: var(--text);
             font-size: 15px;
             font-weight: 500;
@@ -347,12 +388,14 @@ if ($user) {
             color: var(--primary);
         }
 
-        /* PANEL */
+        /* ── PANEL ── */
         .panel {
-            background: #fff;
-            border: 1px solid var(--line);
+            background: rgba(8, 40, 95, .72);
+            border: 1px solid rgba(255, 255, 255, .3);
             border-radius: var(--radius);
-            box-shadow: var(--shadow-md);
+            box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .35);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             padding: 28px;
             margin: 30px 0 60px;
         }
@@ -365,7 +408,9 @@ if ($user) {
             padding: 24px 20px;
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: linear-gradient(135deg, #f8fafc, #eef2ff);
+            background: rgba(8, 40, 95, .72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             margin-bottom: 24px;
             flex-wrap: wrap;
         }
@@ -624,18 +669,86 @@ if ($user) {
             padding: 0 20px;
         }
 
+        /* GLOBAL WHITE TEXT */
+        body,
+        body :where(h1, h2, h3, h4, h5, h6, p, span, div, a, button, label, strong, b, small, th, td, li, i, em, code) {
+            color: #ffffff !important;
+        }
+
+        /* Fix for the toast text */
+        .toast, .toast * {
+            color: #ffffff !important;
+        }
+
+        /* Nav dropdown readable */
+        .nav-dropdown {
+            background: #08285f;
+            border-color: rgba(255, 255, 255, .22);
+        }
+
+        .nav-dropdown-head {
+            color: #ffffff !important;
+            border-bottom-color: rgba(255, 255, 255, .22);
+        }
+
+        .nav-dropdown a:hover,
+        .nav-dropdown button:hover {
+            background: rgba(255, 255, 255, .14);
+            color: #ffffff !important;
+        }
+
+        .nav-dropdown a i,
+        .nav-dropdown button i {
+            color: #ffffff !important;
+        }
+
+        .nav-toggle {
+            color: #ffffff !important;
+            background: #123b78;
+        }
+
+        .nav-toggle:hover {
+            background: #1d4e89;
+            color: #ffffff !important;
+        }
+
+        /* INFO BOXES BACKGROUND & BORDERS */
+        .student-card {
+            background: rgba(8, 40, 95, .72);
+            border-color: rgba(255, 255, 255, .3);
+        }
+
+        .info-grid {
+            background: rgba(255, 255, 255, .15);
+            border-color: rgba(255, 255, 255, .2);
+        }
+
+        .info-item {
+            background: rgba(8, 40, 95, .72);
+        }
+
+        .info-item .info-label {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
+        .info-item .info-value {
+            color: #ffffff !important;
+        }
+
+        .info-item .info-value.empty {
+            color: rgba(255, 255, 255, 0.4) !important;
+        }
+        
+        .info-item .edit-hint {
+            color: rgba(255, 255, 255, 0.6) !important;
+        }
+
         /* RESPONSIVE */
         @media (max-width: 1024px) {
             .nav-inner {
-                padding: 12px 0;
+                padding: 10px 0;
                 gap: 14px;
-                min-height: 92px;
-            }
-
-            .nav-toggle {
-                width: 46px;
-                height: 46px;
-                font-size: 19px;
+                min-height: 100px;
             }
 
             .logo {
@@ -643,35 +756,26 @@ if ($user) {
             }
 
             .logo-mark {
-                width: 68px;
-                height: 68px;
-            }
-
-            .logo-divider {
-                height: 46px;
+                width: 150px;
+                height: 84px;
             }
 
             .logo-text b {
-                font-size: 23px;
-                max-width: 380px;
+                font-size: 25px;
             }
 
-            .logo-text .school-name {
-                font-size: 12.5px;
-                max-width: 380px;
-            }
-
-            .page-label {
-                font-size: 11.5px;
-                padding: 7px 14px;
+            .nav-toggle {
+                width: 54px;
+                height: 54px;
+                font-size: 22px;
             }
         }
 
         @media (max-width: 820px) {
             .nav-inner {
-                padding: 10px 0;
+                padding: 8px 0;
                 gap: 10px;
-                min-height: 76px;
+                min-height: 82px;
             }
 
             .logo {
@@ -681,34 +785,24 @@ if ($user) {
             }
 
             .logo-mark {
-                width: 56px;
-                height: 56px;
-            }
-
-            .logo-divider {
-                height: 40px;
+                width: 125px;
+                height: 70px;
             }
 
             .logo-text b {
-                font-size: 19px;
-                max-width: 240px;
-            }
-
-            .logo-text .school-name {
-                font-size: 11px;
-                max-width: 240px;
+                font-size: 21px;
             }
 
             .nav-toggle {
-                width: 44px;
-                height: 44px;
-                font-size: 18px;
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                border-radius: 12px;
             }
 
             .page-label {
-                font-size: 10.5px;
-                padding: 6px 12px;
-                gap: 6px;
+                font-size: 11px;
+                padding: 6px 8px;
             }
         }
 
@@ -718,38 +812,30 @@ if ($user) {
             }
 
             .nav-inner {
-                padding: 10px 0;
+                padding: 7px 0;
                 gap: 8px;
-                min-height: 66px;
+                min-height: 68px;
             }
 
             .logo {
-                gap: 10px;
+                gap: 8px;
             }
 
             .logo-mark {
-                width: 46px;
-                height: 46px;
-            }
-
-            .logo-divider {
-                display: none;
+                width: 100px;
+                height: 56px;
             }
 
             .logo-text b {
                 font-size: 16px;
-                max-width: 160px;
-            }
-
-            .logo-text .school-name {
-                font-size: 10px;
-                max-width: 160px;
+                max-width: 145px;
             }
 
             .nav-toggle {
                 width: 42px;
                 height: 42px;
                 font-size: 17px;
+                border-radius: 10px;
             }
 
             .page-label {
@@ -820,30 +906,60 @@ if ($user) {
         }
 
         @media (max-width: 400px) {
+            .nav::before,
+            .nav::after {
+                width: 150px;
+            }
+
             .logo-mark {
-                width: 40px;
-                height: 40px;
+                width: 88px;
+                height: 49px;
             }
 
             .logo-text b {
                 font-size: 14px;
-                max-width: 130px;
+                max-width: 125px;
             }
 
-            .logo-text .school-name {
-                font-size: 9px;
-                max-width: 130px;
+            .nav-toggle {
+                width: 40px;
+                height: 40px;
             }
+        }
+
+        /* ── DEVTOOLS ACTIVE ── */
+        body.devtools-active {
+            overflow: hidden !important;
+            background: #000 !important;
+        }
+
+        body.devtools-active>* {
+            visibility: hidden !important;
+        }
+
+        body.devtools-active::before {
+            content: "" !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 2147483647 !important;
+            background-color: #000 !important;
+            background-image: url('../Images/inspect.png') !important;
+            background-repeat: no-repeat !important;
+            background-position: 50% 50% !important;
+            background-size: contain !important;
+            pointer-events: none !important;
+            visibility: visible !important;
         }
     </style>
 </head>
 
 <body>
+
     <header class="nav" id="nav">
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/logo.png"
+                    <img src="../Images/campuslink-logo-navy.png"
                         alt="Eguia National High School logo" onerror="this.style.display='none'">
                 </div>
                 <div class="logo-divider" aria-hidden="true"></div>
@@ -854,7 +970,7 @@ if ($user) {
             </a>
 
             <div class="nav-right">
-                <span class="page-label">Student Portal</span>
+                <span class="page-label">MASTER FILE (INFORMATION)</span>
 
                 <div class="nav-actions">
                     <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
@@ -880,9 +996,9 @@ if ($user) {
                             <i class="fas fa-folder-open"></i> Master File
                         </a>
 
-                        <div style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px;">
-                            <a href="logout.php" role="menuitem" style="color: #b91c1c;">
-                                <i class="fas fa-right-from-bracket" style="color: #b91c1c;"></i> Logout
+                        <div style="border-top: 1px solid rgba(255, 255, 255, 0.2); margin-top: 6px; padding-top: 6px;">
+                            <a href="logout.php" role="menuitem" style="color: #fca5a5;">
+                                <i class="fas fa-right-from-bracket" style="color: #fca5a5;"></i> Logout
                             </a>
                         </div>
                     </div>
@@ -1163,8 +1279,6 @@ if ($user) {
             });
 
             input.addEventListener('blur', () => {
-                /* Blur fires when focus leaves the input — e.g. user taps another field.
-                   Commit the value. */
                 finish(true);
             });
         }
@@ -1193,10 +1307,64 @@ if ($user) {
         document.addEventListener('pointerdown', (e) => {
             if (!activeEditor) return;
             if (e.target === activeEditor.input) return;
-            /* Let the click go through so the other field gets its dblclick handler */
             activeEditor.finish(true);
         });
+
+        /* ── DEVTOOLS DETECTION ── */
+        (function () {
+            'use strict';
+
+            let active = false;
+
+            function setActive(state) {
+                if (state === active) return;
+                active = state;
+                document.body.classList.toggle('devtools-active', state);
+            }
+
+            function detectByDebugger() {
+                const t0 = performance.now();
+                // eslint-disable-next-line no-debugger
+                debugger;
+                const t1 = performance.now();
+                return (t1 - t0) > 100;
+            }
+
+            function detectBySize() {
+                const w = window.outerWidth - window.innerWidth;
+                const h = window.outerHeight - window.innerHeight;
+                if (window.outerWidth === 0 && window.outerHeight === 0) return false;
+                return (w > 160 || h > 160);
+            }
+
+            function tick() {
+                setActive(detectByDebugger() || detectBySize());
+            }
+
+            tick();
+
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(tick, 150);
+            });
+
+            setInterval(tick, 800);
+
+            document.addEventListener('keydown', (e) => {
+                const k = (e.key || '').toLowerCase();
+                if (
+                    e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k)) ||
+                    (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(k))
+                ) {
+                    setTimeout(tick, 200);
+                }
+            }, true);
+        })();
     </script>
+
+    <?php navMarkEntry(); ?>
 </body>
 
 </html>

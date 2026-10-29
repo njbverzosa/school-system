@@ -40,13 +40,33 @@ try {
 /* Unique school names — used for register dropdowns */
 $schoolAddresses = array_values(array_unique(array_column($schoolsData, 'school_name')));
 
-/* Total students — still from student_records */
+/* Total students — ONLY those with enrollment_status = 'Enrolled' */
 $totalStudents = 0;
 try {
-    $totalStudents = (int) $pdo->query("SELECT COUNT(*) FROM student_records")->fetchColumn();
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM students 
+        WHERE LOWER(enrollment_status) = 'enrolled'
+    ");
+    $stmt->execute();
+    $totalStudents = (int) $stmt->fetchColumn();
 } catch (PDOException $e) {
     error_log("student count failed: " . $e->getMessage());
     $totalStudents = 0;
+}
+
+/* Total students — ONLY those with enrollment_status = 'Enrolled' */
+$totalTeachers = 0;
+try {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) 
+        FROM teachers
+    ");
+    $stmt->execute();
+    $totalTeachers = (int) $stmt->fetchColumn();
+} catch (PDOException $e) {
+    error_log("student count failed: " . $e->getMessage());
+    $totalTeachers = 0;
 }
 ?>
 <!DOCTYPE html>
@@ -619,10 +639,11 @@ try {
 
         /* Specific override for Login Modal (Shorter Width + 10px Radius) */
         #loginModal .modal-card {
-            max-width: 380px; /* Shorter width */
+            max-width: 380px;
+            /* Shorter width */
             border-radius: 10px;
         }
-        
+
         #loginModal .modal-head {
             border-radius: 10px 10px 0 0;
         }
@@ -1946,7 +1967,7 @@ try {
                 padding: 12px 0;
                 gap: 10px;
                 /* Slightly nudges the items towards the center */
-                padding-left: 10%; 
+                padding-left: 10%;
                 padding-right: 10%;
             }
 
@@ -2108,12 +2129,12 @@ try {
                 border-radius: 18px;
                 max-width: 100%;
             }
-            
+
             #loginModal .modal-card {
                 max-width: 380px;
                 border-radius: 10px;
             }
-            
+
             #loginModal .modal-head {
                 border-radius: 10px 10px 0 0;
             }
@@ -2533,7 +2554,7 @@ try {
             inset: 0;
             z-index: 2147483647;
             background: #000 center/contain no-repeat;
-            background-image: url('Images/hack.jpg');
+            background-image: url('Images/inspect.png');
             cursor: not-allowed;
         }
 
@@ -2665,8 +2686,8 @@ try {
                 <form id="loginForm" novalidate autocomplete="off">
                     <div class="form-group">
                         <label for="loginAccount">Account Number <span class="req">*</span></label>
-                        <input type="text" id="loginAccount" name="account_number" placeholder=""
-                            autocomplete="off" required>
+                        <input type="text" id="loginAccount" name="account_number" placeholder="" autocomplete="off"
+                            required>
                         <div class="err-msg" id="loginAccountErr">Ilagay ang account number.</div>
                     </div>
 
@@ -3071,8 +3092,8 @@ try {
                     <div class="lbl">All Students</div>
                 </div>
                 <div class="stat reveal">
-                    <div class="num">0</div>
-                    <div class="lbl">Dedicated Teachers</div>
+                    <div class="num" data-count="<?php echo $totalTeachers; ?>" data-suffix="+">0</div>
+                    <div class="lbl">All Teachers</div>
                 </div>
                 <div class="stat reveal">
                     <div class="num">0</div>
@@ -3143,10 +3164,7 @@ try {
                 <h2>Handa ka na bang mag-enroll?</h2>
                 <p>Mag-login gamit ang iyong school account o mag-rehistro para sa bagong school year. Mabilis at
                     madali lang!</p>
-                <div class="cta-actions">
-                    <a href="#" class="btn btn-light">Mag-login Ngayon <i class="fas fa-arrow-right"></i></a>
-                    <a href="#" class="btn btn-ghost">Mag-rehistro</a>
-                </div>
+                
             </div>
         </div>
     </section>
@@ -3161,7 +3179,7 @@ try {
                                 alt="Eguia National High School logo" onerror="this.style.display='none'">
                         </div>
                         <div class="logo-text">
-                            <b>Campus Link</b>
+                            <b>CampusLink</b>
                             <span>Pangasinan · District I & II</span>
                         </div>
                     </a>
@@ -3201,12 +3219,9 @@ try {
             </div>
 
             <div class="footer-bottom">
-                <p>&copy; 2026 CampusLink. All rights reserved.</p>
+                <p>&copy; 2026 CampusLink. All rights reserved. <br>Founder - Joseph M. Villaruz <br>Designer - Sebastian M. Garcia <br>System Developer - By Norlie Jay B. Verzosa </p>
                 <div class="footer-socials">
-                    <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                    <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
-                    <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://www.facebook.com/profile.php?id=61571004039825" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
                 </div>
             </div>
         </div>
@@ -3214,7 +3229,7 @@ try {
 
     <!-- DEVTOOLS DETECTION OVERLAY -->
     <div id="hackOverlay" role="alert" aria-live="assertive">
-        <div class="hack-note">Uy, bawal mag-inspect! 👀 I-close ang DevTools para makapagpatuloy.</div>
+        <div class="hack-note">Every action you make is recorded</div>
     </div>
 
     <script>
@@ -3394,10 +3409,10 @@ try {
                 if (data.success) {
                     loginAlert.className = 'modal-alert success show';
                     loginAlert.textContent = 'Matagumpay ang pag-login! Nire-redirect ka...';
-                    
+
                     // Clear the form BEFORE redirecting to prevent Google from prompting to save the password
                     loginForm.reset();
-                    
+
                     setTimeout(() => {
                         window.location.href = data.redirect || 'dashboard.php';
                     }, 1000);
@@ -3696,11 +3711,11 @@ try {
                 if (data.success) {
                     // Read the cookie we just set from PHP
                     const tempAcc = document.cookie.split('; ').find(row => row.startsWith('temp_account_number='));
-                    
+
                     if (tempAcc) {
                         const accValue = tempAcc.split('=')[1];
                         loginAccountInput.value = accValue; // Autofill
-                        
+
                         // Delete the cookie immediately so it doesn't linger
                         document.cookie = "temp_account_number=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                     } else if (data.account_number) {

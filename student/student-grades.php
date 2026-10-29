@@ -56,6 +56,9 @@ if (!empty($_SESSION['account_number']) && is_string($_SESSION['account_number']
     }
 }
 
+/* ------------------------------------------------------------
+   DISPLAY NAME
+   ------------------------------------------------------------ */
 $displayName = '';
 if ($user) {
     $displayName = trim(
@@ -204,13 +207,22 @@ $adviserSurnameCache = [];
             overflow-y: scroll;
         }
 
+        /* ── PAGE BACKGROUND ── */
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
+            background-color: #1f2327;
+            background-image:
+                linear-gradient(rgba(15, 23, 42, .18), rgba(15, 23, 42, .18)),
+                url('../Images/Colorful_Back_to_School_Stationery_Border.png');
+            background-size: cover;
+            background-position: center top;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
             color: var(--text);
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            min-height: 100vh;
         }
 
         img,
@@ -239,40 +251,79 @@ $adviserSurnameCache = [];
             padding: 0 24px;
         }
 
-        /* NAV */
+        /* ── NAV ── */
         .nav {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: rgba(255, 255, 255, .96);
-            backdrop-filter: blur(14px);
-            border-bottom: 1px solid var(--line);
+            background: #08285f;
+            border-bottom: 0;
+            overflow: visible;
+            isolation: isolate;
+        }
+
+        .nav::before,
+        .nav::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 250px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .nav::before {
+            left: -90px;
+            background:
+                linear-gradient(55deg,
+                    transparent 0 24%,
+                    #9b1536 24% 34%,
+                    #f8c324 34% 42%,
+                    #2058c8 42% 56%,
+                    transparent 56% 100%);
+        }
+
+        .nav::after {
+            right: -90px;
+            transform: scaleX(-1);
+            background:
+                linear-gradient(55deg,
+                    transparent 0 24%,
+                    #9b1536 24% 34%,
+                    #f8c324 34% 42%,
+                    #2058c8 42% 56%,
+                    transparent 56% 100%);
         }
 
         .nav-inner {
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 18px;
-            padding: 14px 0;
-            min-height: 108px;
+            padding: 10px 0;
+            min-height: 120px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 22px;
             min-width: 0;
             text-decoration: none;
             flex-shrink: 1;
         }
 
         .logo-mark {
-            width: 80px;
-            height: 80px;
+            width: 191px;
+            height: 107px;
             flex-shrink: 0;
             display: grid;
             place-items: center;
+            overflow: hidden;
+            background: #08285f;
+            border-radius: 2px;
         }
 
         .logo-mark img {
@@ -283,10 +334,7 @@ $adviserSurnameCache = [];
         }
 
         .logo-divider {
-            width: 1px;
-            height: 54px;
-            background: var(--line);
-            flex-shrink: 0;
+            display: none;
         }
 
         .logo-text {
@@ -295,37 +343,28 @@ $adviserSurnameCache = [];
             justify-content: center;
             line-height: 1.1;
             min-width: 0;
-            gap: 3px;
+            gap: 0;
         }
 
         .logo-text b {
             font-family: 'Poppins', sans-serif;
-            font-size: 26px;
+            font-size: 30px;
             font-weight: 800;
-            color: var(--text);
-            letter-spacing: -.02em;
+            color: #fff;
+            letter-spacing: .01em;
             line-height: 1.1;
+            text-transform: uppercase;
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 480px;
         }
 
         .logo-text .school-name {
-            font-size: 13.5px;
-            font-weight: 500;
-            color: var(--muted);
-            line-height: 1.25;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 480px;
+            display: none;
         }
 
         .nav-right {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 18px;
             flex-shrink: 0;
         }
 
@@ -333,12 +372,12 @@ $adviserSurnameCache = [];
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            font-size: 12.5px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: .1em;
-            color: var(--primary-dark);
-            padding: 8px 16px;
+            letter-spacing: .08em;
+            color: #fff;
+            padding: 8px 10px;
             white-space: nowrap;
         }
 
@@ -347,25 +386,27 @@ $adviserSurnameCache = [];
             align-items: center;
             position: relative;
             flex-shrink: 0;
+            z-index: 201;
         }
 
         .nav-toggle {
             display: grid;
-            width: 48px;
-            height: 48px;
-            border-radius: var(--radius);
-            background: #f1f5f9;
-            border: 1px solid var(--line);
-            color: var(--text);
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            background: #f8fafc;
+            border: 0;
+            color: #0f172a;
             cursor: pointer;
             place-items: center;
-            font-size: 20px;
+            font-size: 24px;
             transition: background .18s, color .18s, transform .18s;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
         }
 
         .nav-toggle:hover {
-            background: #eef2ff;
-            color: var(--primary-dark);
+            background: #fff;
+            color: #08285f;
         }
 
         .nav-toggle:active {
@@ -374,13 +415,13 @@ $adviserSurnameCache = [];
 
         .nav-dropdown {
             position: absolute;
-            top: calc(100% + 10px);
+            top: calc(100% + 12px);
             right: 0;
             left: auto;
             width: 280px;
             background: #fff;
             border: 1px solid var(--line);
-            border-radius: var(--radius);
+            border-radius: 12px;
             box-shadow: var(--shadow-md);
             padding: 8px;
             z-index: 200;
@@ -413,7 +454,7 @@ $adviserSurnameCache = [];
             align-items: center;
             gap: 12px;
             padding: 12px 14px;
-            border-radius: var(--radius);
+            border-radius: 8px;
             color: var(--text);
             font-size: 15px;
             font-weight: 500;
@@ -441,12 +482,14 @@ $adviserSurnameCache = [];
             color: var(--primary);
         }
 
-        /* PANEL */
+        /* ── PANEL ── */
         .panel {
-            background: #fff;
-            border: 1px solid var(--line);
+            background: rgba(8, 40, 95, .72);
+            border: 1px solid rgba(255, 255, 255, .3);
             border-radius: var(--radius);
-            box-shadow: var(--shadow-md);
+            box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .35);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             padding: 28px;
             margin: 30px 0 60px;
         }
@@ -458,28 +501,30 @@ $adviserSurnameCache = [];
             justify-content: space-between;
             gap: 12px;
             padding-bottom: 20px;
-            margin-bottom: 24px;
-            border-bottom: 1px dashed var(--line);
+            margin-bottom: 20px;
+            border-bottom: 1px dashed rgba(255, 255, 255, .3);
             flex-wrap: wrap;
         }
 
         .page-head h2 {
             font-size: 20px;
             font-weight: 800;
-            color: var(--text);
+            color: #fff;
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
         .page-head h2 i {
-            color: var(--primary);
+            color: #fbbf24;
             font-size: 18px;
         }
 
         .page-head .sub {
             font-size: 13px;
-            color: var(--muted);
+            color: rgba(255, 255, 255, .75);
+            display: block;
+            margin-top: 2px;
         }
 
         /* QUARTER GROUP */
@@ -503,14 +548,14 @@ $adviserSurnameCache = [];
         .quarter-head h3 {
             font-size: 14px;
             font-weight: 800;
-            color: var(--text);
+            color: #fff;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .quarter-head h3 i {
-            color: var(--primary);
+            color: #fbbf24;
             font-size: 13px;
         }
 
@@ -519,38 +564,41 @@ $adviserSurnameCache = [];
             font-weight: 600;
             padding: 3px 10px;
             border-radius: 999px;
-            background: #f1f5f9;
-            border: 1px solid var(--line);
-            color: var(--muted);
+            background: rgba(8, 40, 95, .78);
+            border: 1px solid rgba(255, 255, 255, .3);
+            color: #fff;
         }
 
-        /* TABLE */
+        /* ── TABLE — TRANSPARENT BACKGROUND, WHITE TEXT ── */
         .grades-wrap {
             width: 100%;
             overflow-x: auto;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
             -webkit-overflow-scrolling: touch;
+            background: transparent;
         }
 
         table.grades {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
+            background: transparent;
         }
 
         table.grades thead {
-            background: #f1f5f9;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         table.grades th,
         table.grades td {
-            padding: 11px 14px;
+            padding: 12px 16px;
             text-align: left;
-            border-bottom: 1px solid var(--line);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: #ffffff !important;
         }
 
         table.grades th {
@@ -558,43 +606,43 @@ $adviserSurnameCache = [];
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .08em;
-            color: #64748b;
+            color: rgba(255, 255, 255, 0.7) !important;
         }
 
         table.grades tbody tr:last-child td {
             border-bottom: none;
         }
 
-        table.grades tbody tr:hover {
-            background: #f8fafc;
-        }
+
 
         .cell-grade {
             font-family: 'Poppins', sans-serif;
             font-weight: 800;
-            color: var(--primary-dark);
+            color: #ffffff !important;
             font-size: 15px;
         }
 
         .cell-id {
             font-family: 'Poppins', sans-serif;
             font-weight: 700;
-            color: var(--primary-dark);
+            color: #ffffff !important;
             font-size: 13px;
         }
 
         /* EMPTY */
         .empty-state {
             text-align: center;
-            padding: 50px 20px;
-            color: var(--muted);
+            padding: 60px 20px;
+            color: rgba(255, 255, 255, .85);
             font-size: 14px;
+            border: 1px dashed rgba(255, 255, 255, .3);
+            border-radius: var(--radius);
         }
 
         .empty-state i {
-            font-size: 38px;
-            color: #cbd5e1;
-            margin-bottom: 10px;
+            font-size: 40px;
+            color: rgba(255, 255, 255, .4);
+            margin-bottom: 12px;
             display: block;
         }
 
@@ -602,50 +650,55 @@ $adviserSurnameCache = [];
             display: block;
             margin-top: 10px;
             font-size: 11.5px;
-            color: var(--red);
+            color: #fca5a5;
             font-family: monospace;
             word-break: break-all;
         }
 
-        /* =====================================================
-           DEVTOOLS DETECTION OVERLAY
-           Shown ONLY while DevTools is open, hidden when closed.
-           ===================================================== */
-        #devtools-overlay {
-          display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 2147483647;
-            background: #000 center/contain no-repeat;
-            background-image: url('../Images/edit.jpg');
-            cursor: not-allowed;
+        /* GLOBAL WHITE TEXT */
+        body,
+        body :where(h1, h2, h3, h4, h5, h6, p, span, div, a, button, label, strong, b, small, th, td, li, i, em, code) {
+            color: #ffffff !important;
         }
 
-        #devtools-overlay.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        /* Nav dropdown readable */
+        .nav-dropdown {
+            background: #08285f;
+            border-color: rgba(255, 255, 255, .22);
         }
 
-        #devtools-overlay img {
-            max-width: 100vw;
-            max-height: 100vh;
-            object-fit: contain;
-            display: block;
+        .nav-dropdown-head {
+            color: #ffffff !important;
+            border-bottom-color: rgba(255, 255, 255, .22);
+        }
+
+        .nav-dropdown a:hover,
+        .nav-dropdown button:hover {
+            background: rgba(255, 255, 255, .14);
+            color: #ffffff !important;
+        }
+
+        .nav-dropdown a i,
+        .nav-dropdown button i {
+            color: #ffffff !important;
+        }
+
+        .nav-toggle {
+            color: #ffffff !important;
+            background: #123b78;
+        }
+
+        .nav-toggle:hover {
+            background: #1d4e89;
+            color: #ffffff !important;
         }
 
         /* RESPONSIVE */
         @media (max-width: 1024px) {
             .nav-inner {
-                padding: 12px 0;
+                padding: 10px 0;
                 gap: 14px;
-                min-height: 92px;
-            }
-
-            .nav-toggle {
-                width: 46px;
-                height: 46px;
-                font-size: 19px;
+                min-height: 100px;
             }
 
             .logo {
@@ -653,35 +706,26 @@ $adviserSurnameCache = [];
             }
 
             .logo-mark {
-                width: 68px;
-                height: 68px;
-            }
-
-            .logo-divider {
-                height: 46px;
+                width: 150px;
+                height: 84px;
             }
 
             .logo-text b {
-                font-size: 23px;
-                max-width: 380px;
+                font-size: 25px;
             }
 
-            .logo-text .school-name {
-                font-size: 12.5px;
-                max-width: 380px;
-            }
-
-            .page-label {
-                font-size: 11.5px;
-                padding: 7px 14px;
+            .nav-toggle {
+                width: 54px;
+                height: 54px;
+                font-size: 22px;
             }
         }
 
         @media (max-width: 820px) {
             .nav-inner {
-                padding: 10px 0;
+                padding: 8px 0;
                 gap: 10px;
-                min-height: 76px;
+                min-height: 82px;
             }
 
             .logo {
@@ -691,34 +735,24 @@ $adviserSurnameCache = [];
             }
 
             .logo-mark {
-                width: 56px;
-                height: 56px;
-            }
-
-            .logo-divider {
-                height: 40px;
+                width: 125px;
+                height: 70px;
             }
 
             .logo-text b {
-                font-size: 19px;
-                max-width: 240px;
-            }
-
-            .logo-text .school-name {
-                font-size: 11px;
-                max-width: 240px;
+                font-size: 21px;
             }
 
             .nav-toggle {
-                width: 44px;
-                height: 44px;
-                font-size: 18px;
+                width: 48px;
+                height: 48px;
+                font-size: 20px;
+                border-radius: 12px;
             }
 
             .page-label {
-                font-size: 10.5px;
-                padding: 6px 12px;
-                gap: 6px;
+                font-size: 11px;
+                padding: 6px 8px;
             }
         }
 
@@ -728,38 +762,30 @@ $adviserSurnameCache = [];
             }
 
             .nav-inner {
-                padding: 10px 0;
+                padding: 7px 0;
                 gap: 8px;
-                min-height: 66px;
+                min-height: 68px;
             }
 
             .logo {
-                gap: 10px;
+                gap: 8px;
             }
 
             .logo-mark {
-                width: 46px;
-                height: 46px;
-            }
-
-            .logo-divider {
-                display: none;
+                width: 100px;
+                height: 56px;
             }
 
             .logo-text b {
                 font-size: 16px;
-                max-width: 160px;
-            }
-
-            .logo-text .school-name {
-                font-size: 10px;
-                max-width: 160px;
+                max-width: 145px;
             }
 
             .nav-toggle {
                 width: 42px;
                 height: 42px;
                 font-size: 17px;
+                border-radius: 10px;
             }
 
             .page-label {
@@ -781,45 +807,70 @@ $adviserSurnameCache = [];
 
             table.grades th,
             table.grades td {
-                padding: 9px 11px;
+                padding: 10px 12px;
                 font-size: 13px;
-            }
-
-            .cell-grade {
-                font-size: 14px;
             }
         }
 
         @media (max-width: 400px) {
+            .nav::before,
+            .nav::after {
+                width: 150px;
+            }
+
             .logo-mark {
-                width: 40px;
-                height: 40px;
+                width: 88px;
+                height: 49px;
             }
 
             .logo-text b {
                 font-size: 14px;
-                max-width: 130px;
+                max-width: 125px;
             }
 
-            .logo-text .school-name {
-                font-size: 9px;
-                max-width: 130px;
+            .nav-toggle {
+                width: 40px;
+                height: 40px;
             }
+        }
+
+        /* ── DEVTOOLS ACTIVE ── */
+        body.devtools-active {
+            overflow: hidden !important;
+            background: #000 !important;
+        }
+
+        body.devtools-active>* {
+            visibility: hidden !important;
+        }
+
+        body.devtools-active::before {
+            content: "" !important;
+            position: fixed !important;
+            inset: 0 !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            z-index: 2147483647 !important;
+            background-color: #000 !important;
+            background-image: url('../Images/inspect.png') !important;
+            background-repeat: no-repeat !important;
+            background-position: 50% 50% !important;
+            background-size: contain !important;
+            pointer-events: none !important;
+            visibility: visible !important;
         }
     </style>
 </head>
 
 <body>
-    <!-- DEVTOOLS DETECTION OVERLAY (hidden unless DevTools is open) -->
-    <div id="devtools-overlay" aria-hidden="true">
-        <img src="../Images/edit.jpg"/>
-    </div>
 
     <header class="nav" id="nav">
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/logo.png"
+                    <img src="../Images/campuslink-logo-navy.png"
                         alt="Eguia National High School logo" onerror="this.style.display='none'">
                 </div>
                 <div class="logo-divider" aria-hidden="true"></div>
@@ -830,7 +881,7 @@ $adviserSurnameCache = [];
             </a>
 
             <div class="nav-right">
-                <span class="page-label">Student Portal</span>
+                <span class="page-label">MY GRADES</span>
 
                 <div class="nav-actions">
                     <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
@@ -958,9 +1009,6 @@ $adviserSurnameCache = [];
     </main>
 
     <script>
-        /* =====================================================
-           NAV DROPDOWN
-           ===================================================== */
         const navToggle = document.getElementById('navToggle');
         const navDropdown = document.getElementById('navDropdown');
 
@@ -971,140 +1019,67 @@ $adviserSurnameCache = [];
         });
 
         document.addEventListener('click', (e) => {
-            if (navDropdown && !navDropdown.contains(e.target) && e.target !== navToggle) {
+            if (navDropdown && !navDropdown.contains(e.target) && navToggle && e.target !== navToggle) {
                 navDropdown.classList.remove('open');
                 navToggle.setAttribute('aria-expanded', 'false');
             }
         });
 
-        /* =====================================================
-           DEVTOOLS DETECTION — SHOW/HIDE OVERLAY
-           Overlay is shown ONLY while DevTools is open.
-           It is hidden again when DevTools is closed.
-           ===================================================== */
-        (function() {
+        /* ── DEVTOOLS DETECTION ── */
+        (function () {
             'use strict';
 
-            const overlay = document.getElementById('devtools-overlay');
-            if (!overlay) return;
+            let active = false;
 
-            let shown = false;
-
-            function setShown(state, reason) {
-                if (state === shown) return;
-                shown = state;
-
-                if (state) {
-                    overlay.classList.add('active');
-                    overlay.setAttribute('aria-hidden', 'false');
-                } else {
-                    overlay.classList.remove('active');
-                    overlay.setAttribute('aria-hidden', 'true');
-                }
-
-                // eslint-disable-next-line no-console
-                console.warn('[devtools-detector]', state ? 'OPEN' : 'CLOSED', reason || '');
+            function setActive(state) {
+                if (state === active) return;
+                active = state;
+                document.body.classList.toggle('devtools-active', state);
             }
 
-            /* ---------------------------------------------
-               A) Size-based detection (docked DevTools)
-               DevTools docked right/bottom shrinks the
-               viewport while the outer window stays the same.
-               The threshold catches that gap.
-               --------------------------------------------- */
-            const THRESHOLD = 160; // px
-
-            function detectBySize() {
-                const wDelta = window.outerWidth  - window.innerWidth;
-                const hDelta = window.outerHeight - window.innerHeight;
-
-                // Guard against zero-sized outer window (some browsers report 0)
-                if (window.outerWidth === 0 && window.outerHeight === 0) {
-                    return false;
-                }
-
-                return (wDelta > THRESHOLD || hDelta > THRESHOLD);
-            }
-
-            /* ---------------------------------------------
-               B) Debugger-timing detection (undocked DevTools)
-               A `debugger` statement only pauses when a debugger
-               is attached. When paused, performance.now() around
-               it returns a large delta.
-               --------------------------------------------- */
             function detectByDebugger() {
                 const t0 = performance.now();
                 // eslint-disable-next-line no-debugger
                 debugger;
                 const t1 = performance.now();
-                return (t1 - t0) > 100; // ms — paused = big gap
+                return (t1 - t0) > 100;
             }
 
-            /* ---------------------------------------------
-               C) Console getter trap
-               If DevTools console is open, accessing the id
-               getter of the logged object triggers a pause.
-               This is a best-effort fallback for Chrome/Edge.
-               --------------------------------------------- */
-            let trapObject = {};
-            let trapFired = false;
-
-            Object.defineProperty(trapObject, 'id', {
-                get: function() {
-                    trapFired = true;
-                    return 'trap';
-                }
-            });
-
-            function runTrap() {
-                trapFired = false;
-                // eslint-disable-next-line no-console
-                console.log(trapObject);
-                // If DevTools console rendered it, the getter would have fired.
-                // Note: not 100% reliable, but useful as a fallback.
+            function detectBySize() {
+                const w = window.outerWidth - window.innerWidth;
+                const h = window.outerHeight - window.innerHeight;
+                if (window.outerWidth === 0 && window.outerHeight === 0) return false;
+                return (w > 160 || h > 160);
             }
 
-            /* ---------------------------------------------
-               MASTER LOOP — runs detection, updates overlay
-               --------------------------------------------- */
             function tick() {
-                const isOpen = detectBySize() || detectByDebugger();
-
-                if (isOpen) {
-                    setShown(true, detectBySize() ? 'size' : 'debugger');
-                } else {
-                    setShown(false, 'closed');
-                }
+                setActive(detectByDebugger() || detectBySize());
             }
 
-            // Re-check on resize (docking / undocking triggers resize)
+            tick();
+
             let resizeTimer = null;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(tick, 150);
             });
 
-            // Periodic check — every 500ms while page is active
-            const intervalId = setInterval(tick, 500);
+            setInterval(tick, 800);
 
-            // Clean up if the page is hidden (saves CPU)
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    clearInterval(intervalId);
-                } else {
-                    tick();
-                    // Restart interval after returning to the tab
-                    // (we re-create it to avoid holding a stale interval)
-                    setTimeout(() => {
-                        setInterval(tick, 500);
-                    }, 100);
+            document.addEventListener('keydown', (e) => {
+                const k = (e.key || '').toLowerCase();
+                if (
+                    e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k)) ||
+                    (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(k))
+                ) {
+                    setTimeout(tick, 200);
                 }
-            });
-
-            // First run
-            tick();
+            }, true);
         })();
     </script>
+
+    <?php navMarkEntry(); ?>
 </body>
 
 </html>
