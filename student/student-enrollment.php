@@ -1758,8 +1758,6 @@ unset($_SESSION['flash']['just_enrolled']);
             }, 5000);
         }
     </script>
-
-    <?php navMarkEntry(); ?>
 </body>
 
 </html>

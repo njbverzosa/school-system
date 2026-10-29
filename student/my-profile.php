@@ -1363,8 +1363,6 @@ if ($user) {
             }, true);
         })();
     </script>
-
-    <?php navMarkEntry(); ?>
 </body>
 
 </html>

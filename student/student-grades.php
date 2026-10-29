@@ -1078,8 +1078,6 @@ $adviserSurnameCache = [];
             }, true);
         })();
     </script>
-
-    <?php navMarkEntry(); ?>
 </body>
 
 </html>
