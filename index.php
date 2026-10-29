@@ -3220,9 +3220,6 @@ try {
 
             <div class="footer-bottom">
                 <p>&copy; 2026 CampusLink. All rights reserved. <br>Founder - Joseph M. Villaruz <br>Designer - Sebastian M. Garcia <br>System Developer - By Norlie Jay B. Verzosa </p>
-                <div class="footer-socials">
-                    <a href="https://www.facebook.com/profile.php?id=61571004039825" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                </div>
             </div>
         </div>
     </footer>
